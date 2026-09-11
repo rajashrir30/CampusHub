@@ -8,6 +8,12 @@ export default defineConfig({
   root: projectRoot,
   plugins: [react()],
   server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
     fs: {
       // Keep Vite's file-system scope inside client instead of walking into OneDrive parents.
       allow: [projectRoot],

@@ -4,7 +4,9 @@ import {BrowserRouter,useNavigate,useLocation,Link} from "react-router-dom";
 import {BookOpen,Search,LayoutDashboard,MessageCircle,Users,Bell,Settings,LogOut,Upload,ArrowUp,ArrowDown,Download,Plus,Menu,X,Sparkles,CheckCircle2,AlertCircle,ChevronLeft,ChevronRight} from "lucide-react";
 import "./index.css";
 
-const API=import.meta.env.VITE_API_URL||"http://localhost:5000/api";
+// Use Vite's same-origin proxy in development. This avoids failures when the
+// browser opens the app on localhost, 127.0.0.1, or another local hostname.
+const API=(import.meta.env.VITE_API_URL||"/api").replace(/\/$/,"");
 async function api(path,opts={}){
   const token=localStorage.getItem("accessToken");let res;
   const request=(accessToken)=>fetch(API+path,{...opts,headers:{...(opts.body instanceof FormData?{}:{"Content-Type":"application/json"}),...(accessToken?{Authorization:"Bearer "+accessToken}:{})}});
