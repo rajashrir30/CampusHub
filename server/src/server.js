@@ -11,7 +11,7 @@ import crypto from 'crypto';
 import {v2 as cloudinary} from 'cloudinary';
 import nodemailer from 'nodemailer';
 
-const app=express(); const cache=new NodeCache({stdTTL:60}); const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*1024}});
+const app=express(); const cache=new NodeCache({stdTTL:60}); const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:50*1024*1024}});
 const cloudinaryKeys=['CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET']; const missingCloudinaryKeys=cloudinaryKeys.filter(key=>!process.env[key]?.trim());
 if(!missingCloudinaryKeys.length) cloudinary.config({cloud_name:process.env.CLOUDINARY_CLOUD_NAME,api_key:process.env.CLOUDINARY_API_KEY,api_secret:process.env.CLOUDINARY_API_SECRET}); else console.warn('Cloudinary uploads disabled. Missing: '+missingCloudinaryKeys.join(', '));
 const digestTimers=new Map();
@@ -39,6 +39,9 @@ const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(nex
 const normalizeDomain=value=>String(value||'').trim().toLowerCase().replace(/^@/,'');
 const emailDomain=email=>String(email||'').toLowerCase().split('@').pop();
 async function bootstrapAdmin(){const email=process.env.ADMIN_EMAIL?.trim().toLowerCase();const password=process.env.ADMIN_PASSWORD;if(!email||!password)return console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are not set; no bootstrap admin was created');let admin=await User.findOne({email});if(!admin){admin=await User.create({name:process.env.ADMIN_NAME||'CampusHub Admin',email,password:await bcrypt.hash(password,10),isAdmin:true,emailVerified:true});console.log('Bootstrap admin created: '+email)}else if(!admin.isAdmin||!admin.emailVerified){admin.isAdmin=true;admin.emailVerified=true;await admin.save();console.log('Bootstrap admin verified/promoted: '+email)}const domain=normalizeDomain(process.env.COLLEGE_EMAIL_DOMAIN);if(domain)await College.updateOne({domain},{$setOnInsert:{name:process.env.COLLEGE_NAME||domain,domain,approved:true}},{upsert:true})}
+const mongoUri=process.env.MONGO_URI;
+const databaseReady=!mongoUri?Promise.reject(new Error('MONGO_URI is not configured')):mongoose.connect(mongoUri).then(async()=>{console.log('MongoDB connected');await bootstrapAdmin();return true}).catch(error=>{console.error('MongoDB connection failed:',error.message);throw error});
+app.use((req,res,next)=>databaseReady.then(()=>next()).catch(error=>res.status(503).json({message:'Database unavailable. Check the server MONGO_URI setting.',detail:error.message})));
 function tokens(user){return {accessToken:jwt.sign({id:user._id},process.env.JWT_SECRET||'dev-secret',{expiresIn:'15m'}),refreshToken:jwt.sign({id:user._id},process.env.JWT_REFRESH_SECRET||'dev-refresh',{expiresIn:'30d'})}}
 async function auth(req,res,next){try{const t=req.headers.authorization?.split(' ')[1];req.user=await User.findById(jwt.verify(t,process.env.JWT_SECRET||'dev-secret').id);if(!req.user)throw Error();if(!req.user.collegeDomain){req.user.collegeDomain=emailDomain(req.user.email);await req.user.save();await Promise.all([Note.updateMany({uploader:req.user._id,collegeDomain:{$exists:false}},{$set:{collegeDomain:req.user.collegeDomain}}),Doubt.updateMany({author:req.user._id,collegeDomain:{$exists:false}},{$set:{collegeDomain:req.user.collegeDomain}})])}next()}catch{res.status(401).json({message:'Authentication required'})}}
 const authLimit=rateLimit({windowMs:15*60*1000,max:50}); app.use('/api/auth',authLimit);
@@ -79,8 +82,6 @@ app.get('/api/admin/colleges',auth,admin,asyncRoute(async(req,res)=>res.json({co
 app.post('/api/admin/colleges',auth,admin,asyncRoute(async(req,res)=>{const domain=normalizeDomain(req.body.domain);const name=String(req.body.name||domain).trim();if(!domain||!name)return res.status(400).json({message:'College name and email domain are required'});const college=await College.findOneAndUpdate({domain},{name,domain,approved:true,addedBy:req.user._id},{new:true,upsert:true,setDefaultsOnInsert:true});res.status(201).json(college)}));
 app.delete('/api/admin/colleges/:id',auth,admin,asyncRoute(async(req,res)=>{const college=await College.findByIdAndDelete(req.params.id);if(!college)return res.status(404).json({message:'College not found'});res.json({message:'College access revoked'})}));
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({message:err.message||'Server error'})});
+export default app;
 const port=process.env.PORT||5000;
-app.listen(port,()=>console.log(`CampusHub API on ${port}`));
-mongoose.connect(process.env.MONGO_URI||'mongodb://127.0.0.1:27017/campushub')
-  .then(async()=>{console.log('MongoDB connected');await bootstrapAdmin()})
-  .catch(e=>console.error('MongoDB connection failed. Start MongoDB and restart the server:',e.message));
+if(!process.env.VERCEL) app.listen(port,()=>console.log(`CampusHub API on ${port}`));

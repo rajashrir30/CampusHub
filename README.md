@@ -24,7 +24,7 @@ server's URL, including `/api`, then redeploy. Set the API's `CLIENT_URL` or
 - Note-upload notifications are debounced by subject and semester for 15 minutes and emitted as one digest. The in-memory map is appropriate for a small deployment; Redis plus a queue is the natural multi-instance upgrade.
 - Read-heavy lists use a 60-second `node-cache` cache. Cache invalidation happens on writes; Redis is the next step at scale.
 
-Note uploads are limited to 10 MB and are streamed to Cloudinary. The database stores only the secure URL and Cloudinary public ID.
+Note uploads are limited to 50 MB and are streamed to Cloudinary. The database stores only the secure URL and Cloudinary public ID.
 
 ## API
 
