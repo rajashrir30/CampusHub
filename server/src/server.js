@@ -18,9 +18,14 @@ const digestTimers=new Map();
 const allowedOrigins = [
   process.env.CLIENT_URL,
   "https://campus-hub-opal-seven.vercel.app",
-  "https://campus-hub-git-main-rajashri30s-projects.vercel.app",
-  "https://campus-jjqj8fhwu9-rajashri30s-projects.vercel.app"
-].filter(Boolean);...String(process.env.CLIENT_URLS||'').split(',').map(value=>value.trim()),'http://localhost:5173','http://127.0.0.1:5173'].filter(Boolean); app.use(cors({origin:(origin,callback)=>!origin||allowedOrigins.includes(origin)?callback(null,true):callback(new Error('Origin not allowed'))})); app.use(express.json());
+  "https://campus-hub-git-main-rajashrir30s-projects.vercel.app",
+  "https://campus-3fecppzy9-rajashrir30s-projects.vercel.app",
+  "http://localhost:5173",
+  ...String(process.env.CLIENT_URLS || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean)
+];...String(process.env.CLIENT_URLS||'').split(',').map(value=>value.trim()),'http://localhost:5173','http://127.0.0.1:5173'].filter(Boolean); app.use(cors({origin:(origin,callback)=>!origin||allowedOrigins.includes(origin)?callback(null,true):callback(new Error('Origin not allowed'))})); app.use(express.json());
 const userSchema=new mongoose.Schema({name:String,email:{type:String,unique:true},password:String,branch:String,year:String,semester:String,contributionScore:{type:Number,default:0},isAdmin:{type:Boolean,default:false},emailVerified:{type:Boolean,default:false},emailVerificationCode:String,emailVerificationExpires:Date,passwordResetCode:String,passwordResetExpires:Date},{timestamps:true});
 const noteSchema=new mongoose.Schema({uploader:{type:mongoose.Schema.Types.ObjectId,ref:'User'},title:String,subject:String,semester:String,branch:String,fileUrl:String,cloudinaryPublicId:String,fileType:String,upvotes:[mongoose.Schema.Types.ObjectId],downvotes:[mongoose.Schema.Types.ObjectId],downloadCount:{type:Number,default:0}},{timestamps:true}); noteSchema.index({title:'text',subject:'text'});
 const doubtSchema=new mongoose.Schema({author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},subject:String,title:String,description:String,status:{type:String,default:'open'},answers:[{author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},content:String,isAccepted:Boolean,upvotes:[mongoose.Schema.Types.ObjectId],createdAt:Date}]},{timestamps:true}); doubtSchema.index({title:'text',description:'text'});
