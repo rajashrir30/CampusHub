@@ -10,6 +10,14 @@ CampusHub is a full-stack notes, previous-year questions, and doubt-solving plat
 4. Run `npm run dev`, then open `http://localhost:5173`.
 5. Create your first account from the Signup page. This project does not include seeded users or fake content.
 
+## Deploying the frontend and API separately
+
+The local Vite proxy only works during development. A Vercel frontend cannot use
+`/api` unless the Express server is deployed somewhere publicly (for example
+Render or Railway). Set Vercel's `VITE_API_URL` environment variable to that
+server's URL, including `/api`, then redeploy. Set the API's `CLIENT_URL` or
+`CLIENT_URLS` to the Vercel frontend URL so browser requests pass CORS checks.
+
 ## Design decisions
 
 - Trending uses `0.55 * netVoteScore + 0.25 * normalizedDownloads + 0.20 * recencyScore`, with a logarithmic download normalization and exponential time decay. The isolated formula is in `server/src/utils/ranking.js`.
