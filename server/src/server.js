@@ -15,7 +15,7 @@ const app=express(); const cache=new NodeCache({stdTTL:60}); const upload=multer
 const cloudinaryKeys=['CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET']; const missingCloudinaryKeys=cloudinaryKeys.filter(key=>!process.env[key]?.trim());
 if(!missingCloudinaryKeys.length) cloudinary.config({cloud_name:process.env.CLOUDINARY_CLOUD_NAME,api_key:process.env.CLOUDINARY_API_KEY,api_secret:process.env.CLOUDINARY_API_SECRET}); else console.warn('Cloudinary uploads disabled. Missing: '+missingCloudinaryKeys.join(', '));
 const digestTimers=new Map();
-const allowedOrigins=[process.env.CLIENT_URL const allowedOrigins = [
+const allowedOrigins = [
   process.env.CLIENT_URL,
   "https://campus-hub-opal-seven.vercel.app",
   "https://campus-hub-git-main-rajashri30s-projects.vercel.app",
