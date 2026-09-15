@@ -2,3 +2,9 @@
 @tailwind base; @tailwind components; @tailwind utilities;
 :root{font-family:'DM Sans',sans-serif;color:#111827;background:#f8f7f3} body{margin:0} h1,h2,h3{font-family:'Playfair Display',serif}.serif{font-family:'Playfair Display',serif}.grain{background-image:radial-gradient(#11182712 .7px,transparent .7px);background-size:8px 8px}.card{background:#fff;border:1px solid #e7e4dc;border-radius:18px;box-shadow:0 8px 24px #28332b08}.btn{border-radius:999px;padding:.7rem 1rem;font-weight:700;transition:.2s}.btn:hover{transform:translateY(-1px)}
 .field{width:100%;padding:.85rem 1rem;border:1px solid #e7e4dc;border-radius:.75rem;background:#fff;outline:none}.field:focus{border-color:#58745b;box-shadow:0 0 0 3px #58745b20}.field:disabled,.btn:disabled{opacity:.55;cursor:not-allowed}
+@media (max-width: 767px){
+  body{overflow-x:hidden}
+  input,select,textarea{font-size:16px}
+  .btn{min-height:44px}
+  .card{border-radius:14px}
+}

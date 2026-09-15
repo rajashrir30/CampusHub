@@ -1,20 +1,31 @@
 import React,{createContext,useContext,useEffect,useState} from "react";
 import {createRoot} from "react-dom/client";
 import {BrowserRouter,useNavigate,useLocation,Link} from "react-router-dom";
+import * as tus from "tus-js-client";
 import {BookOpen,Search,LayoutDashboard,MessageCircle,Users,Bell,Settings,LogOut,Upload,ArrowUp,ArrowDown,Download,Plus,Menu,X,Sparkles,CheckCircle2,AlertCircle,ChevronLeft,ChevronRight,Trash2} from "lucide-react";
 import "./index.css";
 
 // Use Vite's same-origin proxy in development. This avoids failures when the
 // browser opens the app on localhost, 127.0.0.1, or another local hostname.
 const API=(import.meta.env.VITE_API_URL||"/api").replace(/\/$/,"");
+const SUPABASE_ANON_KEY=import.meta.env.VITE_SUPABASE_ANON_KEY;
+async function fetchWithTimeout(url,options={},timeoutMs=20000){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{return await fetch(url,{...options,signal:controller.signal})}
+  catch(error){
+    if(error.name==="AbortError")throw Error("The request timed out. Please check that the API and network are available.");
+    throw error;
+  }finally{clearTimeout(timer)}
+}
 async function api(path,opts={}){
   const token=localStorage.getItem("accessToken");let res;
-  const request=(accessToken)=>fetch(API+path,{...opts,headers:{...(opts.body instanceof FormData?{}:{"Content-Type":"application/json"}),...(accessToken?{Authorization:"Bearer "+accessToken}:{})}});
+  const request=(accessToken)=>fetchWithTimeout(API+path,{...opts,headers:{...(opts.body instanceof FormData?{}:{"Content-Type":"application/json"}),...(accessToken?{Authorization:"Bearer "+accessToken}:{})}});
   try{res=await request(token)}
-  catch{throw Error("Cannot reach the API. Please try again.")}
+  catch(error){throw Error(error.message||"Cannot reach the API. Please try again.")}
   if(res.status===401&&!path.startsWith("/auth/")&&localStorage.getItem("refreshToken")){
     try{
-      const refreshed=await fetch(API+"/auth/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refreshToken:localStorage.getItem("refreshToken")})});
+      const refreshed=await fetchWithTimeout(API+"/auth/refresh",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refreshToken:localStorage.getItem("refreshToken")})});
       const refreshData=await refreshed.json().catch(()=>({}));
       if(refreshed.ok){localStorage.setItem("accessToken",refreshData.accessToken);if(refreshData.refreshToken)localStorage.setItem("refreshToken",refreshData.refreshToken);res=await request(refreshData.accessToken)}
       else{localStorage.clear();throw Error("Your session expired. Please sign in again.")}
@@ -26,9 +37,271 @@ const ToastContext=createContext(null);
 function ToastProvider({children}){const [toast,setToast]=useState(null);useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(null),4200);return()=>clearTimeout(timer)},[toast]);const Icon=toast?.type==="error"?AlertCircle:CheckCircle2;return <ToastContext.Provider value={setToast}>{children}{toast&&<div className={"fixed right-5 top-5 z-50 max-w-sm rounded-2xl p-4 shadow-xl text-sm flex gap-3 "+(toast.type==="error"?"bg-coral text-white":"bg-moss text-white")}><Icon size={19}/><span>{toast.message}</span><button onClick={()=>setToast(null)} className="ml-2 opacity-70"><X size={16}/></button></div>}</ToastContext.Provider>}
 const useToast=()=>useContext(ToastContext);
 
-function Shell({children}){const [open,setOpen]=useState(false);const nav=useNavigate();const loc=useLocation();const user=JSON.parse(localStorage.getItem("user")||"null");const items=[["/","Dashboard",LayoutDashboard],["/notes","Browse Notes",BookOpen],["/doubts","Doubt Board",MessageCircle],["/leaderboard","Leaderboard",Users]];const isAdmin=user?.isAdmin;return <div className="min-h-screen bg-cream"><aside className={"fixed z-20 inset-y-0 left-0 w-64 bg-ink text-white p-6 transition-transform "+(open?"translate-x-0":"-translate-x-full")+" md:translate-x-0"}><div className="flex items-center gap-3 mb-12"><div className="w-10 h-10 rounded-xl bg-coral grid place-items-center"><BookOpen/></div><span className="text-xl font-bold">Campus<span className="text-coral">Hub</span></span></div><nav className="space-y-2">{items.map(([href,label,Icon])=><button key={href} onClick={()=>{nav(href);setOpen(false)}} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left "+(loc.pathname===href?"bg-white/10 text-white":"text-white/55 hover:bg-white/5")}><Icon size={18}/>{label}</button>)}{isAdmin&&<button onClick={()=>nav("/admin")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left "+(loc.pathname==="/admin"?"bg-white/10 text-white":"text-white/55 hover:bg-white/5")}><Settings size={18}/>Admin</button>}</nav><div className="absolute bottom-6 left-6 right-6 space-y-2"><button onClick={()=>nav("/notifications")} className={"w-full flex gap-3 px-4 py-3 "+(loc.pathname==="/notifications"?"text-white":"text-white/60")}><Bell size={18}/>Notifications</button><button onClick={()=>nav("/settings")} className={"w-full flex gap-3 px-4 py-3 "+(loc.pathname==="/settings"?"text-white":"text-white/60")}><Settings size={18}/>Settings</button></div></aside><main className="md:ml-64 min-h-screen"><header className="h-20 border-b border-ink/10 flex items-center justify-between px-5 md:px-10 bg-cream/90 backdrop-blur sticky top-0 z-10"><button className="md:hidden" onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button><div className="hidden md:block text-sm text-ink/50">Tuesday, September 8, 2026</div><div className="flex items-center gap-4"><Link to="/search" className="p-2 text-ink/60"><Search size={20}/></Link><div className="w-9 h-9 rounded-full bg-moss text-white grid place-items-center font-bold">{user?.name?.[0]||"G"}</div><button onClick={()=>{localStorage.clear();nav("/login")}}><LogOut size={18} className="text-ink/50"/></button></div></header><div className="p-5 md:p-10 max-w-7xl">{children}</div></main></div>}
-function Modal({title,onClose,children}){return <div className="fixed inset-0 z-40 bg-ink/50 p-4 grid place-items-center"><div className="bg-cream rounded-3xl w-full max-w-lg p-6 shadow-2xl"><div className="flex justify-between items-center mb-5"><h2 className="text-2xl">{title}</h2><button onClick={onClose} className="p-2 rounded-full hover:bg-ink/10"><X/></button></div>{children}</div></div>}
-function UploadModal({onClose}){const [form,setForm]=useState({title:"",subject:"",category:"Notes",semester:"4",branch:"BSc Stat"}),[file,setFile]=useState(null),[loading,setLoading]=useState(false),toast=useToast();async function submit(e){e.preventDefault();if(!file)return toast({type:"error",message:"Please choose a file to upload."});setLoading(true);const body=new FormData();Object.entries(form).forEach(([k,v])=>body.append(k,v));body.append("file",file);try{await api("/notes",{method:"POST",body});toast({type:"success",message:"Resource uploaded successfully."});onClose()}catch(e){toast({type:"error",message:e.message})}finally{setLoading(false)}}return <Modal title="Share a resource" onClose={onClose}><form onSubmit={submit} className="space-y-3"><input required placeholder="Title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="field"/><div className="grid grid-cols-2 gap-3"><select className="field" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Notes</option><option>Assignment</option><option>Practicals</option><option>IMPs</option><option>PYQs</option><option>Other</option></select><input required placeholder="Subject" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} className="field"/></div><div className="grid grid-cols-2 gap-3"><select className="field" value={form.semester} onChange={e=>setForm({...form,semester:e.target.value})}><option>1</option><option>2</option><option>3</option><option>4</option></select><select className="field" value={form.branch} onChange={e=>setForm({...form,branch:e.target.value})}><option>BSc Stat</option><option>MSc Stat</option></select></div><input required type="file" onChange={e=>setFile(e.target.files?.[0]||null)} className="field file:bg-moss file:text-white file:border-0 file:rounded-lg file:px-3 file:py-2"/><p className="text-xs text-ink/45">Maximum file size: 50 MB.</p><button disabled={loading} className="btn bg-ink text-white w-full">{loading?"Uploading…":"Upload resource"}</button></form></Modal>}
+function Shell({children}){const [open,setOpen]=useState(false);const nav=useNavigate();const loc=useLocation();const user=JSON.parse(localStorage.getItem("user")||"null");const items=[["/","Dashboard",LayoutDashboard],["/notes","Browse Notes",BookOpen],["/doubts","Doubt Board",MessageCircle],["/leaderboard","Leaderboard",Users]];const isAdmin=user?.isAdmin;const go=href=>{nav(href);setOpen(false)};return <div className="min-h-screen bg-cream"><aside className={"fixed z-30 inset-y-0 left-0 w-64 bg-ink text-white p-6 transition-transform "+(open?"translate-x-0":"-translate-x-full")+" md:translate-x-0"}><div className="flex items-center gap-3 mb-12"><div className="w-10 h-10 rounded-xl bg-coral grid place-items-center"><BookOpen/></div><span className="text-xl font-bold">Campus<span className="text-coral">Hub</span></span></div><nav className="space-y-2">{items.map(([href,label,Icon])=><button key={href} onClick={()=>go(href)} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left "+(loc.pathname===href?"bg-white/10 text-white":"text-white/55 hover:bg-white/5")}><Icon size={18}/>{label}</button>)}{isAdmin&&<button onClick={()=>go("/admin")} className={"w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left "+(loc.pathname==="/admin"?"bg-white/10 text-white":"text-white/55 hover:bg-white/5")}><Settings size={18}/>Admin</button>}</nav><div className="absolute bottom-6 left-6 right-6 space-y-2"><button onClick={()=>go("/notifications")} className={"w-full flex gap-3 px-4 py-3 "+(loc.pathname==="/notifications"?"text-white":"text-white/60")}><Bell size={18}/>Notifications</button><button onClick={()=>go("/settings")} className={"w-full flex gap-3 px-4 py-3 "+(loc.pathname==="/settings"?"text-white":"text-white/60")}><Settings size={18}/>Settings</button></div></aside>{open&&<button aria-label="Close navigation" className="fixed inset-0 z-20 bg-ink/40 md:hidden" onClick={()=>setOpen(false)}/>}<main className="md:ml-64 min-h-screen"><header className="h-16 md:h-20 border-b border-ink/10 flex items-center justify-between px-3 md:px-10 bg-cream/90 backdrop-blur sticky top-0 z-10"><button className="md:hidden p-2" onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button><div className="hidden md:block text-sm text-ink/50">Tuesday, September 8, 2026</div><div className="flex items-center gap-2 md:gap-4"><Link to="/search" className="p-2 text-ink/60" aria-label="Search"><Search size={20}/></Link><div className="w-9 h-9 rounded-full bg-moss text-white grid place-items-center font-bold">{user?.name?.[0]||"G"}</div><button aria-label="Log out" onClick={()=>{localStorage.clear();nav("/login")}}><LogOut size={18} className="text-ink/50"/></button></div></header><div className="p-3 sm:p-5 md:p-10 max-w-7xl">{children}</div></main></div>}
+function Modal({title,onClose,children}){return <div className="fixed inset-0 z-40 bg-ink/50 p-3 sm:p-4 grid place-items-center"><div className="bg-cream rounded-3xl w-full max-w-lg max-h-[calc(100vh-1.5rem)] overflow-y-auto p-4 sm:p-6 shadow-2xl"><div className="flex justify-between items-center mb-5"><h2 className="text-xl sm:text-2xl">{title}</h2><button onClick={onClose} className="p-2 rounded-full hover:bg-ink/10" aria-label="Close"><X/></button></div>{children}</div></div>}
+// function UploadModal({onClose}){const [form,setForm]=useState({title:"",subject:"",category:"Notes",semester:"4",branch:"BSc Stat"}),[file,setFile]=useState(null),[loading,setLoading]=useState(false),toast=useToast();async function submit(e){e.preventDefault();if(!file)return toast({type:"error",message:"Please choose a file to upload."});setLoading(true);const body=new FormData();Object.entries(form).forEach(([k,v])=>body.append(k,v));body.append("file",file);try{await api("/notes",{method:"POST",body});toast({type:"success",message:"Resource uploaded successfully."});onClose()}catch(e){toast({type:"error",message:e.message})}finally{setLoading(false)}}return <Modal title="Share a resource" onClose={onClose}><form onSubmit={submit} className="space-y-3"><input required placeholder="Title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="field"/><div className="grid grid-cols-2 gap-3"><select className="field" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Notes</option><option>Assignment</option><option>Practicals</option><option>IMPs</option><option>PYQs</option><option>Other</option></select><input required placeholder="Subject" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} className="field"/></div><div className="grid grid-cols-2 gap-3"><select className="field" value={form.semester} onChange={e=>setForm({...form,semester:e.target.value})}><option>1</option><option>2</option><option>3</option><option>4</option></select><select className="field" value={form.branch} onChange={e=>setForm({...form,branch:e.target.value})}><option>BSc Stat</option><option>MSc Stat</option></select></div><input required type="file" onChange={e=>setFile(e.target.files?.[0]||null)} className="field file:bg-moss file:text-white file:border-0 file:rounded-lg file:px-3 file:py-2"/><p className="text-xs text-ink/45">Maximum file size: 50 MB.</p><button disabled={loading} className="btn bg-ink text-white w-full">{loading?"Uploading…":"Upload resource"}</button></form></Modal>}
+function UploadModal({onClose}) {
+  const [form, setForm] = useState({
+    title: "",
+    subject: "",
+    category: "Notes",
+    semester: "4",
+    branch: "BSc Stat"
+  });
+
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [uploadStep, setUploadStep] = useState("");
+  const toast = useToast();
+
+  async function submit(e) {
+    e.preventDefault();
+
+    if (!file) {
+      return toast({
+        type: "error",
+        message: "Please choose a file to upload."
+      });
+    }
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      return toast({
+        type: "error",
+        message: "Only PDF files are allowed."
+      });
+    }
+
+    // Keep this aligned with the backend and Supabase bucket limit.
+    const maxSize = 100 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      return toast({
+        type: "error",
+        message: "File size must be 100 MB or less."
+      });
+    }
+
+    setLoading(true);
+
+    let uploadedPath = "";
+    try {
+      if (!SUPABASE_ANON_KEY) {
+        throw new Error("VITE_SUPABASE_ANON_KEY is missing in the frontend.");
+      }
+
+      // STEP 1: Ask our backend for a secure Supabase upload token
+      setUploadStep("Preparing upload...");
+      const sign = await api("/notes/signed-upload", {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type || "application/pdf",
+          fileSize: file.size,
+          uploadId: crypto.randomUUID()
+        })
+      });
+
+      if (!sign.path || !sign.token) {
+        throw new Error("The server returned an invalid Supabase upload token.");
+      }
+      uploadedPath = sign.path;
+
+      // STEP 2: Upload directly to the private bucket in resumable chunks.
+      await new Promise((resolve, reject) => {
+        const upload = new tus.Upload(file, {
+          endpoint: sign.resumableEndpoint,
+          chunkSize: 6 * 1024 * 1024,
+          retryDelays: [0, 3000, 5000, 10000, 20000],
+          headers: {
+            "x-signature": sign.token,
+            apikey: SUPABASE_ANON_KEY
+          },
+          metadata: {
+            bucketName: sign.bucket,
+            objectName: sign.path,
+            contentType: "application/pdf",
+            cacheControl: "3600"
+          },
+          uploadDataDuringCreation: true,
+          removeFingerprintOnSuccess: true,
+          onError: error => {
+            const responseBody = error.originalResponse?.getBody?.();
+            reject(new Error(responseBody || error.message || "Supabase upload failed."));
+          },
+          onProgress: (bytesUploaded, bytesTotal) => {
+            const percent = Math.round(bytesUploaded / bytesTotal * 100);
+            setUploadStep(`Uploading file... ${percent}%`);
+          },
+          onSuccess: () => resolve()
+        });
+
+        upload.findPreviousUploads().then(previousUploads => {
+          if (previousUploads.length) {
+            upload.resumeFromPreviousUpload(previousUploads[0]);
+          }
+          upload.start();
+        }).catch(reject);
+      });
+
+      // STEP 3: Save only the private Supabase path in the database
+      setUploadStep("Saving resource...");
+      await api("/notes", {
+        method: "POST",
+        body: JSON.stringify({
+          title: form.title,
+          subject: form.subject,
+          category: form.category,
+          semester: form.semester,
+          branch: form.branch,
+          fileType: file.type || "application/octet-stream",
+          filePath: sign.path
+        })
+      });
+
+      toast({
+        type: "success",
+        message: "Resource uploaded successfully."
+      });
+
+      onClose();
+
+    } catch (e) {
+      if (uploadedPath) {
+        try {
+          await api("/notes/upload-cleanup", {
+            method: "POST",
+            body: JSON.stringify({filePath: uploadedPath})
+          });
+        } catch {}
+      }
+      toast({
+        type: "error",
+        message: e.message || "Upload failed."
+      });
+    } finally {
+      setLoading(false);
+      setUploadStep("");
+    }
+  }
+
+  return (
+    <Modal title="Share a resource" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-3">
+
+        <input
+          required
+          placeholder="Title"
+          value={form.title}
+          onChange={e =>
+            setForm({
+              ...form,
+              title: e.target.value
+            })
+          }
+          className="field"
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          <select
+            className="field"
+            value={form.category}
+            onChange={e =>
+              setForm({
+                ...form,
+                category: e.target.value
+              })
+            }
+          >
+            <option>Notes</option>
+            <option>Assignment</option>
+            <option>Practicals</option>
+            <option>IMPs</option>
+            <option>PYQs</option>
+            <option>Other</option>
+          </select>
+
+          <input
+            required
+            placeholder="Subject"
+            value={form.subject}
+            onChange={e =>
+              setForm({
+                ...form,
+                subject: e.target.value
+              })
+            }
+            className="field"
+          />
+
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          <select
+            className="field"
+            value={form.semester}
+            onChange={e =>
+              setForm({
+                ...form,
+                semester: e.target.value
+              })
+            }
+          >
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+          </select>
+
+          <select
+            className="field"
+            value={form.branch}
+            onChange={e =>
+              setForm({
+                ...form,
+                branch: e.target.value
+              })
+            }
+          >
+            <option>BSc Stat</option>
+            <option>MSc Stat</option>
+          </select>
+
+        </div>
+
+        <input
+          required
+          type="file"
+          onChange={e =>
+            setFile(e.target.files?.[0] || null)
+          }
+          className="field file:bg-moss file:text-white file:border-0 file:rounded-lg file:px-3 file:py-2"
+        />
+
+        <p className="text-xs text-ink/45">
+          Maximum file size: 100 MB.
+        </p>
+
+        {file && (
+          <p className="text-xs text-ink/60">
+            Selected: {file.name} (
+            {(file.size / (1024 * 1024)).toFixed(2)} MB)
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn bg-ink text-white w-full"
+        >
+          {loading ? (uploadStep || "Uploading...") : "Upload resource"}
+        </button>
+
+      </form>
+    </Modal>
+  );
+}
 function AskModal({onClose}){const [form,setForm]=useState({subject:"",title:"",description:""}),[loading,setLoading]=useState(false),toast=useToast();async function submit(e){e.preventDefault();setLoading(true);try{await api("/doubts",{method:"POST",body:JSON.stringify(form)});toast({type:"success",message:"Your doubt was posted."});onClose()}catch(e){toast({type:"error",message:e.message})}finally{setLoading(false)}}return <Modal title="Ask a doubt" onClose={onClose}><form onSubmit={submit} className="space-y-3"><input required placeholder="Subject" value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} className="field"/><input required placeholder="Question title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="field"/><textarea required rows="5" placeholder="Describe your question…" value={form.description} onChange={e=>setForm({...form,description:e.target.value})} className="field resize-none"/><button disabled={loading} className="btn bg-moss text-white w-full">{loading?"Posting…":"Post doubt"}</button></form></Modal>}
 function Empty({icon:Icon,title,text}){return <div className="card p-14 text-center"><Icon className="mx-auto text-moss mb-4" size={42}/><h2 className="text-2xl">{title}</h2><p className="text-ink/50 mt-2">{text}</p></div>}
 function Loading(){return <div className="card p-10 text-center text-ink/50"><Sparkles className="mx-auto mb-3 animate-pulse"/>Loading…</div>}

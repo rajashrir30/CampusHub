@@ -1,3 +1,111 @@
+// import 'dotenv/config';
+// import express from 'express';
+// import cors from 'cors';
+// import mongoose from 'mongoose';
+// import bcrypt from 'bcryptjs';
+// import jwt from 'jsonwebtoken';
+// import rateLimit from 'express-rate-limit';
+// import NodeCache from 'node-cache';
+// import multer from 'multer';
+// import crypto from 'crypto';
+// import {v2 as cloudinary} from 'cloudinary';
+// import nodemailer from 'nodemailer';
+
+// const app=express(); const cache=new NodeCache({stdTTL:60}); const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:50*1024*1024}});
+// const cloudinaryKeys=['CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET']; const missingCloudinaryKeys=cloudinaryKeys.filter(key=>!process.env[key]?.trim());
+// if(!missingCloudinaryKeys.length) cloudinary.config({cloud_name:process.env.CLOUDINARY_CLOUD_NAME,api_key:process.env.CLOUDINARY_API_KEY,api_secret:process.env.CLOUDINARY_API_SECRET}); else console.warn('Cloudinary uploads disabled. Missing: '+missingCloudinaryKeys.join(', '));
+// const digestTimers=new Map();
+// const allowedOrigins = [
+//   process.env.CLIENT_URL,
+//   "https://campus-hub-opal-seven.vercel.app",
+//   "https://campus-hub-git-main-rajashrir30s-projects.vercel.app",
+//   "https://campus-3fecppzy9-rajashrir30s-projects.vercel.app",
+//   "http://localhost:5173",
+//   ...String(process.env.CLIENT_URLS || "")
+//     .split(",")
+//     .map(value => value.trim())
+//     .filter(Boolean)
+// ];
+
+// app.use(cors({origin:(origin,callback)=>!origin||allowedOrigins.includes(origin)?callback(null,true):callback(new Error('Origin not allowed'))})); app.use(express.json());
+// const userSchema=new mongoose.Schema({name:String,email:{type:String,unique:true},collegeDomain:String,password:String,branch:String,year:String,semester:String,contributionScore:{type:Number,default:0},isAdmin:{type:Boolean,default:false},emailVerified:{type:Boolean,default:false},emailVerificationCode:String,emailVerificationExpires:Date,passwordResetCode:String,passwordResetExpires:Date},{timestamps:true});
+// const noteSchema=new mongoose.Schema({uploader:{type:mongoose.Schema.Types.ObjectId,ref:'User'},collegeDomain:String,category:{type:String,default:'Notes',enum:['Notes','Assignment','Practicals','IMPs','PYQs','Other']},title:String,subject:String,semester:String,branch:String,fileUrl:String,cloudinaryPublicId:String,fileType:String,upvotes:[mongoose.Schema.Types.ObjectId],downvotes:[mongoose.Schema.Types.ObjectId],downloadCount:{type:Number,default:0}},{timestamps:true}); noteSchema.index({title:'text',subject:'text'});
+// const doubtSchema=new mongoose.Schema({author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},collegeDomain:String,subject:String,title:String,description:String,status:{type:String,default:'open'},answers:[{author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},content:String,isAccepted:Boolean,upvotes:[mongoose.Schema.Types.ObjectId],createdAt:Date}]},{timestamps:true}); doubtSchema.index({title:'text',description:'text'});
+// const notificationSchema=new mongoose.Schema({recipient:{type:mongoose.Schema.Types.ObjectId,ref:'User'},type:String,message:String,read:{type:Boolean,default:false},relatedId:String},{timestamps:true});
+// const collegeSchema=new mongoose.Schema({name:{type:String,required:true},domain:{type:String,required:true,unique:true,lowercase:true,trim:true},approved:{type:Boolean,default:true},addedBy:{type:mongoose.Schema.Types.ObjectId,ref:'User'}},{timestamps:true});
+// const tokenSchema=new mongoose.Schema({user:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},tokenHash:{type:String,required:true,unique:true},expiresAt:{type:Date,required:true}},{timestamps:true});
+// const User=mongoose.model('User',userSchema),Note=mongoose.model('Note',noteSchema),Doubt=mongoose.model('Doubt',doubtSchema),Notification=mongoose.model('Notification',notificationSchema),College=mongoose.model('College',collegeSchema),AuthToken=mongoose.model('AuthToken',tokenSchema);
+// const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next); const id=x=>new mongoose.Types.ObjectId(x);
+// const normalizeDomain=value=>String(value||'').trim().toLowerCase().replace(/^@/,'');
+// const emailDomain=email=>String(email||'').toLowerCase().split('@').pop();
+// async function bootstrapAdmin(){const email=process.env.ADMIN_EMAIL?.trim().toLowerCase();const password=process.env.ADMIN_PASSWORD;if(!email||!password)return console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are not set; no bootstrap admin was created');let admin=await User.findOne({email});if(!admin){admin=await User.create({name:process.env.ADMIN_NAME||'CampusHub Admin',email,password:await bcrypt.hash(password,10),isAdmin:true,emailVerified:true});console.log('Bootstrap admin created: '+email)}else if(!admin.isAdmin||!admin.emailVerified){admin.isAdmin=true;admin.emailVerified=true;await admin.save();console.log('Bootstrap admin verified/promoted: '+email)}const domain=normalizeDomain(process.env.COLLEGE_EMAIL_DOMAIN);if(domain)await College.updateOne({domain},{$setOnInsert:{name:process.env.COLLEGE_NAME||domain,domain,approved:true}},{upsert:true})}
+// const mongoUri=process.env.MONGO_URI;
+// const databaseReady=!mongoUri?Promise.reject(new Error('MONGO_URI is not configured')):mongoose.connect(mongoUri).then(async()=>{console.log('MongoDB connected');await bootstrapAdmin();return true}).catch(error=>{console.error('MongoDB connection failed:',error.message);throw error});
+// app.use((req,res,next)=>databaseReady.then(()=>next()).catch(error=>res.status(503).json({message:'Database unavailable. Check the server MONGO_URI setting.',detail:error.message})));
+// function tokens(user){return {accessToken:jwt.sign({id:user._id},process.env.JWT_SECRET||'dev-secret',{expiresIn:'15m'}),refreshToken:jwt.sign({id:user._id},process.env.JWT_REFRESH_SECRET||'dev-refresh',{expiresIn:'30d'})}}
+// async function auth(req,res,next){try{const t=req.headers.authorization?.split(' ')[1];req.user=await User.findById(jwt.verify(t,process.env.JWT_SECRET||'dev-secret').id);if(!req.user)throw Error();if(!req.user.collegeDomain){req.user.collegeDomain=emailDomain(req.user.email); 
+  
+//   app.post('/api/notes/upload-signature', auth, asyncRoute(async (req, res) => {
+//   const timestamp = Math.round(Date.now() / 1000);
+
+//   const signature = cloudinary.utils.api_sign_request(
+//     {
+//       timestamp,
+//       folder: 'campushub'
+//     },
+//     process.env.CLOUDINARY_API_SECRET
+//   );
+
+//   res.json({
+//     timestamp,
+//     signature,
+//     cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+//     apiKey: process.env.CLOUDINARY_API_KEY,
+//     folder: 'campushub'
+//   });
+// }));
+//   await req.user.save();await Promise.all([Note.updateMany({uploader:req.user._id,collegeDomain:{$exists:false}},{$set:{collegeDomain:req.user.collegeDomain}}),Doubt.updateMany({author:req.user._id,collegeDomain:{$exists:false}},{$set:{collegeDomain:req.user.collegeDomain}})])}next()}catch{res.status(401).json({message:'Authentication required'})}}
+// const authLimit=rateLimit({windowMs:15*60*1000,max:50}); app.use('/api/auth',authLimit);
+// const codeHash=code=>crypto.createHash('sha256').update(String(code)).digest('hex');
+// const mailer=process.env.SMTP_HOST?nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:Number(process.env.SMTP_PORT||587)===465,auth:process.env.SMTP_USER?{user:process.env.SMTP_USER,pass:process.env.SMTP_PASS}:undefined}):null;
+// async function sendCode(to,subject,code){if(!mailer){console.log(`[dev email] ${subject} for ${to}: ${code}`);return}await mailer.sendMail({from:process.env.SMTP_FROM||process.env.SMTP_USER,to,subject,text:`Your CampusHub code is ${code}. It expires in 15 minutes.`})}
+// async function issueVerification(u){const code=String(crypto.randomInt(100000,1000000));u.emailVerificationCode=codeHash(code);u.emailVerificationExpires=new Date(Date.now()+15*60*1000);await u.save();await sendCode(u.email,'Verify your CampusHub email',code)}
+// async function issueReset(u){const code=String(crypto.randomInt(100000,1000000));u.passwordResetCode=codeHash(code);u.passwordResetExpires=new Date(Date.now()+15*60*1000);await u.save();await sendCode(u.email,'Reset your CampusHub password',code)}
+// app.post('/api/auth/signup',asyncRoute(async(req,res)=>{const {name,email,password,branch,year,semester}=req.body;const normalized=String(email||'').trim().toLowerCase();const collegeDomain=emailDomain(normalized);if(!normalized||!normalized.includes('@'))return res.status(400).json({message:'A valid email address is required'});if(!await College.exists({domain:collegeDomain,approved:true}))return res.status(403).json({message:'Your college email domain is not approved yet'});if(await User.exists({email:normalized}))return res.status(409).json({message:'Email is already registered'});const u=await User.create({name,email:normalized,collegeDomain,password:await bcrypt.hash(password,10),branch,year,semester,emailVerified:true});res.status(201).json({...tokens(u),user:publicUser(u)})}));
+// app.post('/api/auth/verify-email',asyncRoute(async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase();const u=await User.findOne({email});if(!u||u.emailVerificationCode!==codeHash(req.body.code)||!u.emailVerificationExpires||u.emailVerificationExpires<new Date())return res.status(400).json({message:'Invalid or expired verification code'});u.emailVerified=true;u.emailVerificationCode=undefined;u.emailVerificationExpires=undefined;await u.save();res.json({...tokens(u),user:{id:u._id,name:u.name,email:u.email,branch:u.branch,semester:u.semester,isAdmin:u.isAdmin}})}));
+// app.post('/api/auth/resend-verification',asyncRoute(async(req,res)=>{const u=await User.findOne({email:String(req.body.email||'').trim().toLowerCase()});if(u&&!u.emailVerified)await issueVerification(u);res.json({message:'If the account exists, a new code was sent.'})}));
+// app.post('/api/auth/forgot-password',asyncRoute(async(req,res)=>{const u=await User.findOne({email:String(req.body.email||'').trim().toLowerCase()});if(u)await issueReset(u);res.json({message:'If the account exists, a reset code was sent.'})}));
+// app.post('/api/auth/reset-password',asyncRoute(async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase();const u=await User.findOne({email});if(!u||u.passwordResetCode!==codeHash(req.body.code)||!u.passwordResetExpires||u.passwordResetExpires<new Date())return res.status(400).json({message:'Invalid or expired reset code'});if(String(req.body.password||'').length<6)return res.status(400).json({message:'Password must be at least 6 characters'});u.password=await bcrypt.hash(req.body.password,10);u.passwordResetCode=undefined;u.passwordResetExpires=undefined;await u.save();res.json({message:'Password reset successfully'})}));
+// app.post('/api/auth/login',asyncRoute(async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase();const u=await User.findOne({email});if(!u||!(await bcrypt.compare(req.body.password||'',u.password)))return res.status(401).json({message:'Invalid email or password'});res.json({...tokens(u),user:publicUser(u)})}));
+// app.post('/api/auth/refresh',asyncRoute(async(req,res)=>{const p=jwt.verify(req.body.refreshToken,process.env.JWT_REFRESH_SECRET||'dev-refresh');const u=await User.findById(p.id);res.json(tokens(u))})); app.post('/api/auth/logout',(req,res)=>res.json({message:'Logged out'}));
+// const clear=()=>cache.flushAll(); const safeName=(u)=>u?.name||'Campus member'; const publicUser=u=>({id:u._id,name:u.name,email:u.email,collegeDomain:u.collegeDomain||emailDomain(u.email),branch:u.branch,year:u.year,semester:u.semester,contributionScore:u.contributionScore,isAdmin:u.isAdmin,emailVerified:u.emailVerified}); const collegeScope=req=>req.user?.isAdmin?{}:{collegeDomain:req.user.collegeDomain||emailDomain(req.user.email)};
+// async function
+// function trending(n){const age=(Date.now()-new Date(n.createdAt).getTime())/86400000;const net=(n.upvotes.length-n.downvotes.length);const downloads=Math.log1p(n.downloadCount)/Math.log(101);const recency=Math.exp(-age/14);return .55*net+.25*downloads+.20*recency}
+// app.get('/api/notes',auth,asyncRoute(async(req,res)=>{const key='notes:'+req.user._id+':'+JSON.stringify(req.query);const hit=cache.get(key);if(hit)return res.json(hit);const q=collegeScope(req);for(const k of ['category','subject','semester','branch'])if(req.query[k])q[k]=req.query[k];if(req.query.search)q.$text={$search:req.query.search};let notes=await Note.find(q).populate('uploader','name').lean();if(req.query.sort==='trending')notes.sort((a,b)=>trending(b)-trending(a));else if(req.query.sort==='popular')notes.sort((a,b)=>b.downloadCount-a.downloadCount);else notes.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const out={notes};cache.set(key,out);res.json(out)}));
+// app.post('/api/notes',auth,upload.single('file'),asyncRoute(async(req,res)=>{const categories=['Notes','Assignment','Practicals','IMPs','PYQs','Other'];const category=categories.includes(req.body.category)?req.body.category:'Notes';const uploaded=await uploadFile(req.file);const n=await Note.create({uploader:req.user._id,collegeDomain:req.user.collegeDomain,category,title:req.body.title,subject:req.body.subject,semester:req.body.semester,branch:req.body.branch,fileType:req.file.mimetype,fileUrl:uploaded.url,cloudinaryPublicId:uploaded.publicId});queueNoteDigest(n);clear();res.status(201).json(n)}));
+// app.get('/api/notes/:id',auth,asyncRoute(async(req,res)=>res.json(await Note.findOne({_id:req.params.id,...collegeScope(req)}).populate('uploader','name'))));
+// const interactionLimit=rateLimit({windowMs:15*60*1000,max:120}); app.use('/api/notes/:id/vote',interactionLimit); app.use('/api/notes/:id/download',interactionLimit);
+// app.post('/api/notes/:id/vote',auth,asyncRoute(async(req,res)=>{if(!['up','down','none'].includes(req.body.type))return res.status(400).json({message:'Vote must be up, down, or none'});const uid=req.user._id;const withoutUser=field=>({$filter:{input:{$ifNull:['$'+field,[]]},as:'vote',cond:{$ne:['$$vote',uid]}}});const update={$set:{upvotes:withoutUser('upvotes'),downvotes:withoutUser('downvotes')}};if(req.body.type==='up')update.$set.upvotes={$concatArrays:[update.$set.upvotes,[uid]]};if(req.body.type==='down')update.$set.downvotes={$concatArrays:[update.$set.downvotes,[uid]]};const n=await Note.findOneAndUpdate({_id:req.params.id,...collegeScope(req)},[update],{new:true});if(!n)return res.status(404).json({message:'Note not found'});clear();res.json(n)}));
+// app.post('/api/notes/:id/download',auth,asyncRoute(async(req,res)=>{const n=await Note.findOneAndUpdate({_id:req.params.id,...collegeScope(req)},{$inc:{downloadCount:1}},{new:true});if(!n)return res.status(404).json({message:'Note not found'});clear();res.json({fileUrl:n.fileUrl,downloadCount:n.downloadCount})}));
+// app.delete('/api/notes/:id',auth,asyncRoute(async(req,res)=>{const n=await Note.findOne({_id:req.params.id,...collegeScope(req)});if(!n||(!req.user.isAdmin&&n.uploader.toString()!==req.user._id.toString()))return res.status(403).json({message:'Not allowed'});await n.deleteOne();clear();res.json({message:'Deleted'})}));
+// app.post('/api/doubts',auth,asyncRoute(async(req,res)=>res.status(201).json(await Doubt.create({...req.body,author:req.user._id,collegeDomain:req.user.collegeDomain}))));
+// app.get('/api/doubts',auth,asyncRoute(async(req,res)=>{const q=collegeScope(req);if(req.query.subject)q.subject=req.query.subject;if(req.query.status)q.status=req.query.status;res.json({doubts:await Doubt.find(q).populate('author','name').sort('-createdAt')})}));
+// app.get('/api/doubts/:id',auth,asyncRoute(async(req,res)=>res.json(await Doubt.findOne({_id:req.params.id,...collegeScope(req)}).populate('author','name').populate('answers.author','name'))));
+// app.post('/api/doubts/:id/answers',auth,asyncRoute(async(req,res)=>{const d=await Doubt.findById(req.params.id);d.answers.push({author:req.user._id,content:req.body.content,isAccepted:false,upvotes:[],createdAt:new Date()});await d.save();if(d.author.toString()!==req.user._id.toString())await Notification.create({recipient:d.author,type:'answer',message:`${safeName(req.user)} answered your doubt`,relatedId:d._id.toString()});res.status(201).json(d)}));
+// app.post('/api/doubts/:id/answers/:answerId/accept',auth,asyncRoute(async(req,res)=>{const d=await Doubt.findById(req.params.id);if(d.author.toString()!==req.user._id.toString())return res.status(403).json({message:'Only the doubt author can accept an answer'});const a=d.answers.id(req.params.answerId);a.isAccepted=true;d.status='resolved';await d.save();await User.findByIdAndUpdate(a.author,{$inc:{contributionScore:25}});res.json(d)}));
+// app.post('/api/doubts/answers/:id/vote',auth,asyncRoute(async(req,res)=>{const d=await Doubt.findOne({'answers._id':req.params.id});const a=d.answers.id(req.params.id);a.upvotes=a.upvotes.includes(req.user._id)?a.upvotes.filter(x=>x.toString()!==req.user._id.toString()):[...a.upvotes,req.user._id];await d.save();res.json(a)}));
+// app.get('/api/users/leaderboard',auth,asyncRoute(async(req,res)=>{const page=Number(req.query.page||1);const users=await User.find(collegeScope(req)).select('-password -emailVerificationCode -passwordResetCode').sort('-contributionScore').skip((page-1)*10).limit(10);res.json({users})})); app.get('/api/users/me',auth,(req,res)=>res.json({user:publicUser(req.user)})); app.patch('/api/users/me',auth,asyncRoute(async(req,res)=>{for(const key of ['name','branch','year','semester'])if(req.body[key]!==undefined)req.user[key]=String(req.body[key]).trim();await req.user.save();res.json({user:publicUser(req.user)})}));
+// app.get('/api/notifications',auth,asyncRoute(async(req,res)=>{const page=Math.max(Number(req.query.page)||1,1);const limit=Math.min(Math.max(Number(req.query.limit)||10,1),50);const filter={recipient:req.user._id};const [notifications,total,unread]=await Promise.all([Notification.find(filter).sort('-createdAt').skip((page-1)*limit).limit(limit),Notification.countDocuments(filter),Notification.countDocuments({...filter,read:false})]);res.json({notifications,page,limit,total,unread,totalPages:Math.ceil(total/limit)})})); app.patch('/api/notifications/:id/read',auth,asyncRoute(async(req,res)=>res.json(await Notification.findOneAndUpdate({_id:req.params.id,recipient:req.user._id},{read:true},{new:true}))));
+// app.get('/api/search',auth,asyncRoute(async(req,res)=>{const q=(req.query.q||'').trim();if(!q)return res.json({notes:[],doubts:[]});const scope=collegeScope(req);const [notes,doubts]=await Promise.all([Note.find({...scope,$text:{$search:q}}).populate('uploader','name').limit(20),Doubt.find({...scope,$text:{$search:q}}).populate('author','name').limit(20)]);res.json({notes,doubts})}));
+// async function admin(req,res,next){const configured=process.env.ADMIN_EMAIL?.trim().toLowerCase();if(!req.user?.isAdmin||!configured||req.user.email!==configured)return res.status(403).json({message:'Admin access required'});next()} app.get('/api/admin/stats',auth,admin,asyncRoute(async(req,res)=>{const week=new Date(Date.now()-7*86400000);res.json({users:await User.countDocuments(),notes:await Note.countDocuments(),doubts:await Doubt.countDocuments(),uploadsThisWeek:await Note.countDocuments({createdAt:{$gte:week}}),resolutionRate:0})})); app.delete('/api/admin/notes/:id',auth,admin,asyncRoute(async(req,res)=>{await Note.findByIdAndDelete(req.params.id);res.json({message:'Deleted'})})); app.delete('/api/admin/doubts/:id',auth,admin,asyncRoute(async(req,res)=>{await Doubt.findByIdAndDelete(req.params.id);res.json({message:'Deleted'})})); app.patch('/api/admin/users/:id/promote',auth,admin,asyncRoute(async(req,res)=>res.json(await User.findByIdAndUpdate(req.params.id,{isAdmin:true},{new:true})))); 
+// app.get('/api/admin/colleges',auth,admin,asyncRoute(async(req,res)=>res.json({colleges:await College.find().sort('name')})));
+// app.post('/api/admin/colleges',auth,admin,asyncRoute(async(req,res)=>{const domain=normalizeDomain(req.body.domain);const name=String(req.body.name||domain).trim();if(!domain||!name)return res.status(400).json({message:'College name and email domain are required'});const college=await College.findOneAndUpdate({domain},{name,domain,approved:true,addedBy:req.user._id},{new:true,upsert:true,setDefaultsOnInsert:true});res.status(201).json(college)}));
+// app.delete('/api/admin/colleges/:id',auth,admin,asyncRoute(async(req,res)=>{const college=await College.findByIdAndDelete(req.params.id);if(!college)return res.status(404).json({message:'College not found'});res.json({message:'College access revoked'})}));
+// app.use((err,req,res,next)=>{console.error(err);res.status(500).json({message:err.message||'Server error'})});
+// export default app;
+// const port=process.env.PORT||5000;
+// if(!process.env.VERCEL) app.listen(port,()=>console.log(`CampusHub API on ${port}`));
+
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -6,82 +114,1895 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import NodeCache from 'node-cache';
-import multer from 'multer';
 import crypto from 'crypto';
-import {v2 as cloudinary} from 'cloudinary';
+import {createClient} from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 
-const app=express(); const cache=new NodeCache({stdTTL:60}); const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:50*1024*1024}});
-const cloudinaryKeys=['CLOUDINARY_CLOUD_NAME','CLOUDINARY_API_KEY','CLOUDINARY_API_SECRET']; const missingCloudinaryKeys=cloudinaryKeys.filter(key=>!process.env[key]?.trim());
-if(!missingCloudinaryKeys.length) cloudinary.config({cloud_name:process.env.CLOUDINARY_CLOUD_NAME,api_key:process.env.CLOUDINARY_API_KEY,api_secret:process.env.CLOUDINARY_API_SECRET}); else console.warn('Cloudinary uploads disabled. Missing: '+missingCloudinaryKeys.join(', '));
-const digestTimers=new Map();
+const app = express();
+
+const cache = new NodeCache({stdTTL: 60});
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseBucket = process.env.SUPABASE_STORAGE_BUCKET || 'pdfs';
+const supabase = supabaseUrl && supabaseServiceRoleKey
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : null;
+const supabaseStorageUrl = supabaseUrl
+  ? supabaseUrl.replace('.supabase.co', '.storage.supabase.co')
+  : null;
+const maxNoteFileSize = 100 * 1024 * 1024;
+const removeSupabaseFile = async filePath => {
+  if (!supabase || !filePath) return;
+  const {error} = await supabase.storage
+    .from(supabaseBucket)
+    .remove([filePath]);
+  if (error) console.error('Supabase cleanup failed:', error.message);
+};
+
+const digestTimers = new Map();
+
 const allowedOrigins = [
   process.env.CLIENT_URL,
-  "https://campus-hub-opal-seven.vercel.app",
-  "https://campus-hub-git-main-rajashrir30s-projects.vercel.app",
-  "https://campus-3fecppzy9-rajashrir30s-projects.vercel.app",
-  "http://localhost:5173",
-  ...String(process.env.CLIENT_URLS || "")
-    .split(",")
+  'https://campus-hub-opal-seven.vercel.app',
+  'https://campus-hub-git-main-rajashrir30s-projects.vercel.app',
+  'https://campus-3fecppzy9-rajashrir30s-projects.vercel.app',
+  'http://localhost:5173',
+  ...String(process.env.CLIENT_URLS || '')
+    .split(',')
     .map(value => value.trim())
     .filter(Boolean)
 ];
 
-app.use(cors({origin:(origin,callback)=>!origin||allowedOrigins.includes(origin)?callback(null,true):callback(new Error('Origin not allowed'))})); app.use(express.json());
-const userSchema=new mongoose.Schema({name:String,email:{type:String,unique:true},collegeDomain:String,password:String,branch:String,year:String,semester:String,contributionScore:{type:Number,default:0},isAdmin:{type:Boolean,default:false},emailVerified:{type:Boolean,default:false},emailVerificationCode:String,emailVerificationExpires:Date,passwordResetCode:String,passwordResetExpires:Date},{timestamps:true});
-const noteSchema=new mongoose.Schema({uploader:{type:mongoose.Schema.Types.ObjectId,ref:'User'},collegeDomain:String,category:{type:String,default:'Notes',enum:['Notes','Assignment','Practicals','IMPs','PYQs','Other']},title:String,subject:String,semester:String,branch:String,fileUrl:String,cloudinaryPublicId:String,fileType:String,upvotes:[mongoose.Schema.Types.ObjectId],downvotes:[mongoose.Schema.Types.ObjectId],downloadCount:{type:Number,default:0}},{timestamps:true}); noteSchema.index({title:'text',subject:'text'});
-const doubtSchema=new mongoose.Schema({author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},collegeDomain:String,subject:String,title:String,description:String,status:{type:String,default:'open'},answers:[{author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},content:String,isAccepted:Boolean,upvotes:[mongoose.Schema.Types.ObjectId],createdAt:Date}]},{timestamps:true}); doubtSchema.index({title:'text',description:'text'});
-const notificationSchema=new mongoose.Schema({recipient:{type:mongoose.Schema.Types.ObjectId,ref:'User'},type:String,message:String,read:{type:Boolean,default:false},relatedId:String},{timestamps:true});
-const collegeSchema=new mongoose.Schema({name:{type:String,required:true},domain:{type:String,required:true,unique:true,lowercase:true,trim:true},approved:{type:Boolean,default:true},addedBy:{type:mongoose.Schema.Types.ObjectId,ref:'User'}},{timestamps:true});
-const tokenSchema=new mongoose.Schema({user:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},tokenHash:{type:String,required:true,unique:true},expiresAt:{type:Date,required:true}},{timestamps:true});
-const User=mongoose.model('User',userSchema),Note=mongoose.model('Note',noteSchema),Doubt=mongoose.model('Doubt',doubtSchema),Notification=mongoose.model('Notification',notificationSchema),College=mongoose.model('College',collegeSchema),AuthToken=mongoose.model('AuthToken',tokenSchema);
-const asyncRoute=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next); const id=x=>new mongoose.Types.ObjectId(x);
-const normalizeDomain=value=>String(value||'').trim().toLowerCase().replace(/^@/,'');
-const emailDomain=email=>String(email||'').toLowerCase().split('@').pop();
-async function bootstrapAdmin(){const email=process.env.ADMIN_EMAIL?.trim().toLowerCase();const password=process.env.ADMIN_PASSWORD;if(!email||!password)return console.warn('ADMIN_EMAIL and ADMIN_PASSWORD are not set; no bootstrap admin was created');let admin=await User.findOne({email});if(!admin){admin=await User.create({name:process.env.ADMIN_NAME||'CampusHub Admin',email,password:await bcrypt.hash(password,10),isAdmin:true,emailVerified:true});console.log('Bootstrap admin created: '+email)}else if(!admin.isAdmin||!admin.emailVerified){admin.isAdmin=true;admin.emailVerified=true;await admin.save();console.log('Bootstrap admin verified/promoted: '+email)}const domain=normalizeDomain(process.env.COLLEGE_EMAIL_DOMAIN);if(domain)await College.updateOne({domain},{$setOnInsert:{name:process.env.COLLEGE_NAME||domain,domain,approved:true}},{upsert:true})}
-const mongoUri=process.env.MONGO_URI;
-const databaseReady=!mongoUri?Promise.reject(new Error('MONGO_URI is not configured')):mongoose.connect(mongoUri).then(async()=>{console.log('MongoDB connected');await bootstrapAdmin();return true}).catch(error=>{console.error('MongoDB connection failed:',error.message);throw error});
-app.use((req,res,next)=>databaseReady.then(()=>next()).catch(error=>res.status(503).json({message:'Database unavailable. Check the server MONGO_URI setting.',detail:error.message})));
-function tokens(user){return {accessToken:jwt.sign({id:user._id},process.env.JWT_SECRET||'dev-secret',{expiresIn:'15m'}),refreshToken:jwt.sign({id:user._id},process.env.JWT_REFRESH_SECRET||'dev-refresh',{expiresIn:'30d'})}}
-async function auth(req,res,next){try{const t=req.headers.authorization?.split(' ')[1];req.user=await User.findById(jwt.verify(t,process.env.JWT_SECRET||'dev-secret').id);if(!req.user)throw Error();if(!req.user.collegeDomain){req.user.collegeDomain=emailDomain(req.user.email);await req.user.save();await Promise.all([Note.updateMany({uploader:req.user._id,collegeDomain:{$exists:false}},{$set:{collegeDomain:req.user.collegeDomain}}),Doubt.updateMany({author:req.user._id,collegeDomain:{$exists:false}},{$set:{collegeDomain:req.user.collegeDomain}})])}next()}catch{res.status(401).json({message:'Authentication required'})}}
-const authLimit=rateLimit({windowMs:15*60*1000,max:50}); app.use('/api/auth',authLimit);
-const codeHash=code=>crypto.createHash('sha256').update(String(code)).digest('hex');
-const mailer=process.env.SMTP_HOST?nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||587),secure:Number(process.env.SMTP_PORT||587)===465,auth:process.env.SMTP_USER?{user:process.env.SMTP_USER,pass:process.env.SMTP_PASS}:undefined}):null;
-async function sendCode(to,subject,code){if(!mailer){console.log(`[dev email] ${subject} for ${to}: ${code}`);return}await mailer.sendMail({from:process.env.SMTP_FROM||process.env.SMTP_USER,to,subject,text:`Your CampusHub code is ${code}. It expires in 15 minutes.`})}
-async function issueVerification(u){const code=String(crypto.randomInt(100000,1000000));u.emailVerificationCode=codeHash(code);u.emailVerificationExpires=new Date(Date.now()+15*60*1000);await u.save();await sendCode(u.email,'Verify your CampusHub email',code)}
-async function issueReset(u){const code=String(crypto.randomInt(100000,1000000));u.passwordResetCode=codeHash(code);u.passwordResetExpires=new Date(Date.now()+15*60*1000);await u.save();await sendCode(u.email,'Reset your CampusHub password',code)}
-app.post('/api/auth/signup',asyncRoute(async(req,res)=>{const {name,email,password,branch,year,semester}=req.body;const normalized=String(email||'').trim().toLowerCase();const collegeDomain=emailDomain(normalized);if(!normalized||!normalized.includes('@'))return res.status(400).json({message:'A valid email address is required'});if(!await College.exists({domain:collegeDomain,approved:true}))return res.status(403).json({message:'Your college email domain is not approved yet'});if(await User.exists({email:normalized}))return res.status(409).json({message:'Email is already registered'});const u=await User.create({name,email:normalized,collegeDomain,password:await bcrypt.hash(password,10),branch,year,semester,emailVerified:true});res.status(201).json({...tokens(u),user:publicUser(u)})}));
-app.post('/api/auth/verify-email',asyncRoute(async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase();const u=await User.findOne({email});if(!u||u.emailVerificationCode!==codeHash(req.body.code)||!u.emailVerificationExpires||u.emailVerificationExpires<new Date())return res.status(400).json({message:'Invalid or expired verification code'});u.emailVerified=true;u.emailVerificationCode=undefined;u.emailVerificationExpires=undefined;await u.save();res.json({...tokens(u),user:{id:u._id,name:u.name,email:u.email,branch:u.branch,semester:u.semester,isAdmin:u.isAdmin}})}));
-app.post('/api/auth/resend-verification',asyncRoute(async(req,res)=>{const u=await User.findOne({email:String(req.body.email||'').trim().toLowerCase()});if(u&&!u.emailVerified)await issueVerification(u);res.json({message:'If the account exists, a new code was sent.'})}));
-app.post('/api/auth/forgot-password',asyncRoute(async(req,res)=>{const u=await User.findOne({email:String(req.body.email||'').trim().toLowerCase()});if(u)await issueReset(u);res.json({message:'If the account exists, a reset code was sent.'})}));
-app.post('/api/auth/reset-password',asyncRoute(async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase();const u=await User.findOne({email});if(!u||u.passwordResetCode!==codeHash(req.body.code)||!u.passwordResetExpires||u.passwordResetExpires<new Date())return res.status(400).json({message:'Invalid or expired reset code'});if(String(req.body.password||'').length<6)return res.status(400).json({message:'Password must be at least 6 characters'});u.password=await bcrypt.hash(req.body.password,10);u.passwordResetCode=undefined;u.passwordResetExpires=undefined;await u.save();res.json({message:'Password reset successfully'})}));
-app.post('/api/auth/login',asyncRoute(async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase();const u=await User.findOne({email});if(!u||!(await bcrypt.compare(req.body.password||'',u.password)))return res.status(401).json({message:'Invalid email or password'});res.json({...tokens(u),user:publicUser(u)})}));
-app.post('/api/auth/refresh',asyncRoute(async(req,res)=>{const p=jwt.verify(req.body.refreshToken,process.env.JWT_REFRESH_SECRET||'dev-refresh');const u=await User.findById(p.id);res.json(tokens(u))})); app.post('/api/auth/logout',(req,res)=>res.json({message:'Logged out'}));
-const clear=()=>cache.flushAll(); const safeName=(u)=>u?.name||'Campus member'; const publicUser=u=>({id:u._id,name:u.name,email:u.email,collegeDomain:u.collegeDomain||emailDomain(u.email),branch:u.branch,year:u.year,semester:u.semester,contributionScore:u.contributionScore,isAdmin:u.isAdmin,emailVerified:u.emailVerified}); const collegeScope=req=>req.user?.isAdmin?{}:{collegeDomain:req.user.collegeDomain||emailDomain(req.user.email)};
-async function uploadFile(file){if(!file)throw Error('A file is required');if(missingCloudinaryKeys.length)throw Error('Cloudinary is not configured. Add '+missingCloudinaryKeys.join(', ')+' to server/.env and restart the server.');return await new Promise((resolve,reject)=>{const s=cloudinary.uploader.upload_stream({resource_type:'auto',folder:'campushub'},(e,r)=>e?reject(e):resolve({url:r.secure_url,publicId:r.public_id}));s.end(file.buffer)})}
-function queueNoteDigest(note){const key=`${note.subject}:${note.semester}`;clearTimeout(digestTimers.get(key));digestTimers.set(key,setTimeout(async()=>{try{const users=await User.find({_id:{$ne:note.uploader}}).select('_id');await Notification.insertMany(users.map(u=>({recipient:u._id,type:'note_digest',message:`New ${note.subject} resources are available for semester ${note.semester}`,relatedId:note._id.toString()})));}catch(e){console.error('Digest notification failed',e.message)}digestTimers.delete(key)},15*60*1000))}
-function trending(n){const age=(Date.now()-new Date(n.createdAt).getTime())/86400000;const net=(n.upvotes.length-n.downvotes.length);const downloads=Math.log1p(n.downloadCount)/Math.log(101);const recency=Math.exp(-age/14);return .55*net+.25*downloads+.20*recency}
-app.get('/api/notes',auth,asyncRoute(async(req,res)=>{const key='notes:'+req.user._id+':'+JSON.stringify(req.query);const hit=cache.get(key);if(hit)return res.json(hit);const q=collegeScope(req);for(const k of ['category','subject','semester','branch'])if(req.query[k])q[k]=req.query[k];if(req.query.search)q.$text={$search:req.query.search};let notes=await Note.find(q).populate('uploader','name').lean();if(req.query.sort==='trending')notes.sort((a,b)=>trending(b)-trending(a));else if(req.query.sort==='popular')notes.sort((a,b)=>b.downloadCount-a.downloadCount);else notes.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const out={notes};cache.set(key,out);res.json(out)}));
-app.post('/api/notes',auth,upload.single('file'),asyncRoute(async(req,res)=>{const categories=['Notes','Assignment','Practicals','IMPs','PYQs','Other'];const category=categories.includes(req.body.category)?req.body.category:'Notes';const uploaded=await uploadFile(req.file);const n=await Note.create({uploader:req.user._id,collegeDomain:req.user.collegeDomain,category,title:req.body.title,subject:req.body.subject,semester:req.body.semester,branch:req.body.branch,fileType:req.file.mimetype,fileUrl:uploaded.url,cloudinaryPublicId:uploaded.publicId});queueNoteDigest(n);clear();res.status(201).json(n)}));
-app.get('/api/notes/:id',auth,asyncRoute(async(req,res)=>res.json(await Note.findOne({_id:req.params.id,...collegeScope(req)}).populate('uploader','name'))));
-const interactionLimit=rateLimit({windowMs:15*60*1000,max:120}); app.use('/api/notes/:id/vote',interactionLimit); app.use('/api/notes/:id/download',interactionLimit);
-app.post('/api/notes/:id/vote',auth,asyncRoute(async(req,res)=>{if(!['up','down','none'].includes(req.body.type))return res.status(400).json({message:'Vote must be up, down, or none'});const uid=req.user._id;const withoutUser=field=>({$filter:{input:{$ifNull:['$'+field,[]]},as:'vote',cond:{$ne:['$$vote',uid]}}});const update={$set:{upvotes:withoutUser('upvotes'),downvotes:withoutUser('downvotes')}};if(req.body.type==='up')update.$set.upvotes={$concatArrays:[update.$set.upvotes,[uid]]};if(req.body.type==='down')update.$set.downvotes={$concatArrays:[update.$set.downvotes,[uid]]};const n=await Note.findOneAndUpdate({_id:req.params.id,...collegeScope(req)},[update],{new:true});if(!n)return res.status(404).json({message:'Note not found'});clear();res.json(n)}));
-app.post('/api/notes/:id/download',auth,asyncRoute(async(req,res)=>{const n=await Note.findOneAndUpdate({_id:req.params.id,...collegeScope(req)},{$inc:{downloadCount:1}},{new:true});if(!n)return res.status(404).json({message:'Note not found'});clear();res.json({fileUrl:n.fileUrl,downloadCount:n.downloadCount})}));
-app.delete('/api/notes/:id',auth,asyncRoute(async(req,res)=>{const n=await Note.findOne({_id:req.params.id,...collegeScope(req)});if(!n||(!req.user.isAdmin&&n.uploader.toString()!==req.user._id.toString()))return res.status(403).json({message:'Not allowed'});await n.deleteOne();clear();res.json({message:'Deleted'})}));
-app.post('/api/doubts',auth,asyncRoute(async(req,res)=>res.status(201).json(await Doubt.create({...req.body,author:req.user._id,collegeDomain:req.user.collegeDomain}))));
-app.get('/api/doubts',auth,asyncRoute(async(req,res)=>{const q=collegeScope(req);if(req.query.subject)q.subject=req.query.subject;if(req.query.status)q.status=req.query.status;res.json({doubts:await Doubt.find(q).populate('author','name').sort('-createdAt')})}));
-app.get('/api/doubts/:id',auth,asyncRoute(async(req,res)=>res.json(await Doubt.findOne({_id:req.params.id,...collegeScope(req)}).populate('author','name').populate('answers.author','name'))));
-app.post('/api/doubts/:id/answers',auth,asyncRoute(async(req,res)=>{const d=await Doubt.findById(req.params.id);d.answers.push({author:req.user._id,content:req.body.content,isAccepted:false,upvotes:[],createdAt:new Date()});await d.save();if(d.author.toString()!==req.user._id.toString())await Notification.create({recipient:d.author,type:'answer',message:`${safeName(req.user)} answered your doubt`,relatedId:d._id.toString()});res.status(201).json(d)}));
-app.post('/api/doubts/:id/answers/:answerId/accept',auth,asyncRoute(async(req,res)=>{const d=await Doubt.findById(req.params.id);if(d.author.toString()!==req.user._id.toString())return res.status(403).json({message:'Only the doubt author can accept an answer'});const a=d.answers.id(req.params.answerId);a.isAccepted=true;d.status='resolved';await d.save();await User.findByIdAndUpdate(a.author,{$inc:{contributionScore:25}});res.json(d)}));
-app.post('/api/doubts/answers/:id/vote',auth,asyncRoute(async(req,res)=>{const d=await Doubt.findOne({'answers._id':req.params.id});const a=d.answers.id(req.params.id);a.upvotes=a.upvotes.includes(req.user._id)?a.upvotes.filter(x=>x.toString()!==req.user._id.toString()):[...a.upvotes,req.user._id];await d.save();res.json(a)}));
-app.get('/api/users/leaderboard',auth,asyncRoute(async(req,res)=>{const page=Number(req.query.page||1);const users=await User.find(collegeScope(req)).select('-password -emailVerificationCode -passwordResetCode').sort('-contributionScore').skip((page-1)*10).limit(10);res.json({users})})); app.get('/api/users/me',auth,(req,res)=>res.json({user:publicUser(req.user)})); app.patch('/api/users/me',auth,asyncRoute(async(req,res)=>{for(const key of ['name','branch','year','semester'])if(req.body[key]!==undefined)req.user[key]=String(req.body[key]).trim();await req.user.save();res.json({user:publicUser(req.user)})}));
-app.get('/api/notifications',auth,asyncRoute(async(req,res)=>{const page=Math.max(Number(req.query.page)||1,1);const limit=Math.min(Math.max(Number(req.query.limit)||10,1),50);const filter={recipient:req.user._id};const [notifications,total,unread]=await Promise.all([Notification.find(filter).sort('-createdAt').skip((page-1)*limit).limit(limit),Notification.countDocuments(filter),Notification.countDocuments({...filter,read:false})]);res.json({notifications,page,limit,total,unread,totalPages:Math.ceil(total/limit)})})); app.patch('/api/notifications/:id/read',auth,asyncRoute(async(req,res)=>res.json(await Notification.findOneAndUpdate({_id:req.params.id,recipient:req.user._id},{read:true},{new:true}))));
-app.get('/api/search',auth,asyncRoute(async(req,res)=>{const q=(req.query.q||'').trim();if(!q)return res.json({notes:[],doubts:[]});const scope=collegeScope(req);const [notes,doubts]=await Promise.all([Note.find({...scope,$text:{$search:q}}).populate('uploader','name').limit(20),Doubt.find({...scope,$text:{$search:q}}).populate('author','name').limit(20)]);res.json({notes,doubts})}));
-async function admin(req,res,next){const configured=process.env.ADMIN_EMAIL?.trim().toLowerCase();if(!req.user?.isAdmin||!configured||req.user.email!==configured)return res.status(403).json({message:'Admin access required'});next()} app.get('/api/admin/stats',auth,admin,asyncRoute(async(req,res)=>{const week=new Date(Date.now()-7*86400000);res.json({users:await User.countDocuments(),notes:await Note.countDocuments(),doubts:await Doubt.countDocuments(),uploadsThisWeek:await Note.countDocuments({createdAt:{$gte:week}}),resolutionRate:0})})); app.delete('/api/admin/notes/:id',auth,admin,asyncRoute(async(req,res)=>{await Note.findByIdAndDelete(req.params.id);res.json({message:'Deleted'})})); app.delete('/api/admin/doubts/:id',auth,admin,asyncRoute(async(req,res)=>{await Doubt.findByIdAndDelete(req.params.id);res.json({message:'Deleted'})})); app.patch('/api/admin/users/:id/promote',auth,admin,asyncRoute(async(req,res)=>res.json(await User.findByIdAndUpdate(req.params.id,{isAdmin:true},{new:true})))); 
-app.get('/api/admin/colleges',auth,admin,asyncRoute(async(req,res)=>res.json({colleges:await College.find().sort('name')})));
-app.post('/api/admin/colleges',auth,admin,asyncRoute(async(req,res)=>{const domain=normalizeDomain(req.body.domain);const name=String(req.body.name||domain).trim();if(!domain||!name)return res.status(400).json({message:'College name and email domain are required'});const college=await College.findOneAndUpdate({domain},{name,domain,approved:true,addedBy:req.user._id},{new:true,upsert:true,setDefaultsOnInsert:true});res.status(201).json(college)}));
-app.delete('/api/admin/colleges/:id',auth,admin,asyncRoute(async(req,res)=>{const college=await College.findByIdAndDelete(req.params.id);if(!college)return res.status(404).json({message:'College not found'});res.json({message:'College access revoked'})}));
-app.use((err,req,res,next)=>{console.error(err);res.status(500).json({message:err.message||'Server error'})});
+app.use(
+  cors({
+    origin: (origin, callback) =>
+      !origin || allowedOrigins.includes(origin)
+        ? callback(null, true)
+        : callback(new Error('Origin not allowed'))
+  })
+);
+
+app.use(express.json());
+
+
+// =========================
+// SCHEMAS
+// =========================
+
+const userSchema = new mongoose.Schema(
+  {
+    name: String,
+    email: {
+      type: String,
+      unique: true
+    },
+    collegeDomain: String,
+    password: String,
+    branch: String,
+    year: String,
+    semester: String,
+    contributionScore: {
+      type: Number,
+      default: 0
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+    emailVerificationCode: String,
+    emailVerificationExpires: Date,
+    passwordResetCode: String,
+    passwordResetExpires: Date
+  },
+  {timestamps: true}
+);
+
+const noteSchema = new mongoose.Schema(
+  {
+    uploader: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    collegeDomain: String,
+    category: {
+      type: String,
+      default: 'Notes',
+      enum: [
+        'Notes',
+        'Assignment',
+        'Practicals',
+        'IMPs',
+        'PYQs',
+        'Other'
+      ]
+    },
+    title: String,
+    subject: String,
+    semester: String,
+    branch: String,
+    filePath: String,
+    fileUrl: String,
+    cloudinaryPublicId: String,
+    fileType: String,
+    upvotes: [mongoose.Schema.Types.ObjectId],
+    downvotes: [mongoose.Schema.Types.ObjectId],
+    downloadCount: {
+      type: Number,
+      default: 0
+    }
+  },
+  {timestamps: true}
+);
+
+noteSchema.index({
+  title: 'text',
+  subject: 'text'
+});
+
+const doubtSchema = new mongoose.Schema(
+  {
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    collegeDomain: String,
+    subject: String,
+    title: String,
+    description: String,
+    status: {
+      type: String,
+      default: 'open'
+    },
+    answers: [
+      {
+        author: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        content: String,
+        isAccepted: Boolean,
+        upvotes: [mongoose.Schema.Types.ObjectId],
+        createdAt: Date
+      }
+    ]
+  },
+  {timestamps: true}
+);
+
+doubtSchema.index({
+  title: 'text',
+  description: 'text'
+});
+
+const notificationSchema = new mongoose.Schema(
+  {
+    recipient: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    type: String,
+    message: String,
+    read: {
+      type: Boolean,
+      default: false
+    },
+    relatedId: String
+  },
+  {timestamps: true}
+);
+
+const collegeSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true
+    },
+    domain: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true
+    },
+    approved: {
+      type: Boolean,
+      default: true
+    },
+    addedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  },
+  {timestamps: true}
+);
+
+const tokenSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    tokenHash: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    }
+  },
+  {timestamps: true}
+);
+
+const User = mongoose.model('User', userSchema);
+const Note = mongoose.model('Note', noteSchema);
+const Doubt = mongoose.model('Doubt', doubtSchema);
+const Notification = mongoose.model(
+  'Notification',
+  notificationSchema
+);
+const College = mongoose.model('College', collegeSchema);
+const AuthToken = mongoose.model('AuthToken', tokenSchema);
+
+
+// =========================
+// HELPERS
+// =========================
+
+const asyncRoute =
+  fn =>
+  (req, res, next) =>
+    Promise.resolve(fn(req, res, next)).catch(next);
+
+const id = x => new mongoose.Types.ObjectId(x);
+
+const normalizeDomain = value =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, '');
+
+const emailDomain = email =>
+  String(email || '')
+    .toLowerCase()
+    .split('@')
+    .pop();
+
+const configuredCollegeDomains = () => [
+  process.env.COLLEGE_EMAIL_DOMAIN,
+  ...String(process.env.COLLEGE_EMAIL_DOMAINS || '').split(',')
+].map(normalizeDomain).filter(Boolean);
+
+const clear = () => cache.flushAll();
+
+const safeName = u => u?.name || 'Campus member';
+
+const publicUser = u => ({
+  id: u._id,
+  name: u.name,
+  email: u.email,
+  collegeDomain:
+    u.collegeDomain || emailDomain(u.email),
+  branch: u.branch,
+  year: u.year,
+  semester: u.semester,
+  contributionScore: u.contributionScore,
+  isAdmin: u.isAdmin,
+  emailVerified: u.emailVerified
+});
+
+const collegeScope = req =>
+  req.user?.isAdmin
+    ? {}
+    : {
+        collegeDomain:
+          req.user.collegeDomain ||
+          emailDomain(req.user.email)
+      };
+
+const escapeRegex = value =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+
+// =========================
+// DATABASE
+// =========================
+
+async function bootstrapAdmin() {
+  for (const domain of [...new Set(configuredCollegeDomains())]) {
+    await College.updateOne(
+      {domain},
+      {
+        $setOnInsert: {
+          name: domain === normalizeDomain(process.env.COLLEGE_EMAIL_DOMAIN)
+            ? process.env.COLLEGE_NAME || domain
+            : domain,
+          domain,
+          approved: true
+        }
+      },
+      {upsert: true}
+    );
+  }
+
+  const email = process.env.ADMIN_EMAIL
+    ?.trim()
+    .toLowerCase();
+
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    return console.warn(
+      'ADMIN_EMAIL and ADMIN_PASSWORD are not set; no bootstrap admin was created'
+    );
+  }
+
+  let admin = await User.findOne({email});
+
+  if (!admin) {
+    admin = await User.create({
+      name:
+        process.env.ADMIN_NAME ||
+        'CampusHub Admin',
+      email,
+      password: await bcrypt.hash(password, 10),
+      isAdmin: true,
+      emailVerified: true
+    });
+
+    console.log(
+      'Bootstrap admin created: ' + email
+    );
+  } else if (
+    !admin.isAdmin ||
+    !admin.emailVerified
+  ) {
+    admin.isAdmin = true;
+    admin.emailVerified = true;
+
+    await admin.save();
+
+    console.log(
+      'Bootstrap admin verified/promoted: ' + email
+    );
+  }
+
+}
+
+const mongoUri = process.env.MONGO_URI;
+
+const databaseReady = !mongoUri
+  ? Promise.reject(
+      new Error('MONGO_URI is not configured')
+    )
+  : mongoose
+      .connect(mongoUri, {serverSelectionTimeoutMS: 10000})
+      .then(async () => {
+        console.log('MongoDB connected');
+
+        await bootstrapAdmin();
+
+        return true;
+      })
+      .catch(error => {
+        console.error(
+          'MongoDB connection failed:',
+          error.message
+        );
+
+        throw error;
+      });
+
+app.use((req, res, next) =>
+  databaseReady
+    .then(() => next())
+    .catch(error =>
+      res.status(503).json({
+        message:
+          'Database unavailable. Check the server MONGO_URI setting.',
+        detail: error.message
+      })
+    )
+);
+
+
+// =========================
+// AUTHENTICATION
+// =========================
+
+function tokens(user) {
+  return {
+    accessToken: jwt.sign(
+      {id: user._id},
+      process.env.JWT_SECRET ||
+        'dev-secret',
+      {expiresIn: '15m'}
+    ),
+
+    refreshToken: jwt.sign(
+      {id: user._id},
+      process.env.JWT_REFRESH_SECRET ||
+        'dev-refresh',
+      {expiresIn: '30d'}
+    )
+  };
+}
+
+async function auth(req, res, next) {
+  try {
+    const t =
+      req.headers.authorization?.split(' ')[1];
+
+    req.user = await User.findById(
+      jwt.verify(
+        t,
+        process.env.JWT_SECRET ||
+          'dev-secret'
+      ).id
+    );
+
+    if (!req.user) {
+      throw Error();
+    }
+
+    if (!req.user.collegeDomain) {
+      req.user.collegeDomain =
+        emailDomain(req.user.email);
+
+      await req.user.save();
+
+      await Promise.all([
+        Note.updateMany(
+          {
+            uploader: req.user._id,
+            collegeDomain: {
+              $exists: false
+            }
+          },
+          {
+            $set: {
+              collegeDomain:
+                req.user.collegeDomain
+            }
+          }
+        ),
+
+        Doubt.updateMany(
+          {
+            author: req.user._id,
+            collegeDomain: {
+              $exists: false
+            }
+          },
+          {
+            $set: {
+              collegeDomain:
+                req.user.collegeDomain
+            }
+          }
+        )
+      ]);
+    }
+
+    next();
+  } catch {
+    res.status(401).json({
+      message: 'Authentication required'
+    });
+  }
+}
+
+
+// =========================
+// SUPABASE SIGNED UPLOAD
+// =========================
+
+app.post(
+  '/api/notes/signed-upload',
+  auth,
+  asyncRoute(async (req, res) => {
+    if (!supabase) {
+      return res.status(500).json({
+        message: 'Supabase Storage is not configured on the server.'
+      });
+    }
+
+    const originalName = String(req.body.fileName || 'file')
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(-120);
+    const fileType = String(req.body.fileType || '').toLowerCase();
+    const fileSize = Number(req.body.fileSize);
+    if (!originalName.toLowerCase().endsWith('.pdf') || fileType !== 'application/pdf') {
+      return res.status(400).json({message: 'Only PDF files are allowed.'});
+    }
+    if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > maxNoteFileSize) {
+      return res.status(400).json({message: 'PDF files must be 100 MB or smaller.'});
+    }
+    const uploadId = String(req.body.uploadId || crypto.randomUUID())
+      .replace(/[^a-zA-Z0-9_-]/g, '')
+      .slice(0, 80);
+    const filePath = `${req.user._id}/${uploadId}-${originalName}`;
+    const {data, error} = await supabase.storage
+      .from(supabaseBucket)
+      .createSignedUploadUrl(filePath);
+
+    if (error) return res.status(500).json({message: error.message});
+
+    res.json({
+      path: data.path,
+      token: data.token,
+      bucket: supabaseBucket,
+      resumableEndpoint: `${supabaseStorageUrl}/storage/v1/upload/resumable/sign`
+    });
+  })
+);
+
+
+// =========================
+// RATE LIMITING
+// =========================
+
+const authLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50
+});
+
+app.use('/api/auth', authLimit);
+
+
+// =========================
+// EMAIL
+// =========================
+
+const codeHash = code =>
+  crypto
+    .createHash('sha256')
+    .update(String(code))
+    .digest('hex');
+
+const mailer = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(
+        process.env.SMTP_PORT || 587
+      ),
+      secure:
+        Number(
+          process.env.SMTP_PORT || 587
+        ) === 465,
+      auth: process.env.SMTP_USER
+        ? {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        : undefined
+    })
+  : null;
+
+async function sendCode(
+  to,
+  subject,
+  code
+) {
+  if (!mailer) {
+    console.log(
+      `[dev email] ${subject} for ${to}: ${code}`
+    );
+
+    return;
+  }
+
+  await mailer.sendMail({
+    from:
+      process.env.SMTP_FROM ||
+      process.env.SMTP_USER,
+    to,
+    subject,
+    text: `Your CampusHub code is ${code}. It expires in 15 minutes.`
+  });
+}
+
+async function issueVerification(u) {
+  const code = String(
+    crypto.randomInt(100000, 1000000)
+  );
+
+  u.emailVerificationCode =
+    codeHash(code);
+
+  u.emailVerificationExpires =
+    new Date(Date.now() + 15 * 60 * 1000);
+
+  await u.save();
+
+  await sendCode(
+    u.email,
+    'Verify your CampusHub email',
+    code
+  );
+}
+
+async function issueReset(u) {
+  const code = String(
+    crypto.randomInt(100000, 1000000)
+  );
+
+  u.passwordResetCode =
+    codeHash(code);
+
+  u.passwordResetExpires =
+    new Date(Date.now() + 15 * 60 * 1000);
+
+  await u.save();
+
+  await sendCode(
+    u.email,
+    'Reset your CampusHub password',
+    code
+  );
+}
+
+
+// =========================
+// AUTH ROUTES
+// =========================
+
+app.post(
+  '/api/auth/signup',
+  asyncRoute(async (req, res) => {
+    const {
+      name,
+      email,
+      password,
+      branch,
+      year,
+      semester
+    } = req.body;
+
+    const normalized = String(
+      email || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    const collegeDomain =
+      emailDomain(normalized);
+
+    if (
+      !normalized ||
+      !normalized.includes('@')
+    ) {
+      return res.status(400).json({
+        message:
+          'A valid email address is required'
+      });
+    }
+
+    if (
+      await User.exists({
+        email: normalized
+      })
+    ) {
+      return res.status(409).json({
+        message:
+          'Email is already registered'
+      });
+    }
+
+    const u = await User.create({
+      name,
+      email: normalized,
+      collegeDomain,
+      password: await bcrypt.hash(
+        password,
+        10
+      ),
+      branch,
+      year,
+      semester,
+      emailVerified: true
+    });
+
+    await College.updateOne(
+      {domain: collegeDomain},
+      {
+        $setOnInsert: {
+          name: collegeDomain,
+          domain: collegeDomain,
+          approved: true
+        }
+      },
+      {upsert: true}
+    );
+
+    res.status(201).json({
+      ...tokens(u),
+      user: publicUser(u)
+    });
+  })
+);
+
+app.post(
+  '/api/auth/verify-email',
+  asyncRoute(async (req, res) => {
+    const email = String(
+      req.body.email || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    const u = await User.findOne({email});
+
+    if (
+      !u ||
+      u.emailVerificationCode !==
+        codeHash(req.body.code) ||
+      !u.emailVerificationExpires ||
+      u.emailVerificationExpires <
+        new Date()
+    ) {
+      return res.status(400).json({
+        message:
+          'Invalid or expired verification code'
+      });
+    }
+
+    u.emailVerified = true;
+    u.emailVerificationCode = undefined;
+    u.emailVerificationExpires = undefined;
+
+    await u.save();
+
+    res.json({
+      ...tokens(u),
+      user: {
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        branch: u.branch,
+        semester: u.semester,
+        isAdmin: u.isAdmin
+      }
+    });
+  })
+);
+
+app.post(
+  '/api/auth/resend-verification',
+  asyncRoute(async (req, res) => {
+    const u = await User.findOne({
+      email: String(
+        req.body.email || ''
+      )
+        .trim()
+        .toLowerCase()
+    });
+
+    if (u && !u.emailVerified) {
+      await issueVerification(u);
+    }
+
+    res.json({
+      message:
+        'If the account exists, a new code was sent.'
+    });
+  })
+);
+
+app.post(
+  '/api/auth/forgot-password',
+  asyncRoute(async (req, res) => {
+    const u = await User.findOne({
+      email: String(
+        req.body.email || ''
+      )
+        .trim()
+        .toLowerCase()
+    });
+
+    if (u) {
+      await issueReset(u);
+    }
+
+    res.json({
+      message:
+        'If the account exists, a reset code was sent.'
+    });
+  })
+);
+
+app.post(
+  '/api/auth/reset-password',
+  asyncRoute(async (req, res) => {
+    const email = String(
+      req.body.email || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    const u = await User.findOne({email});
+
+    if (
+      !u ||
+      u.passwordResetCode !==
+        codeHash(req.body.code) ||
+      !u.passwordResetExpires ||
+      u.passwordResetExpires <
+        new Date()
+    ) {
+      return res.status(400).json({
+        message:
+          'Invalid or expired reset code'
+      });
+    }
+
+    if (
+      String(req.body.password || '')
+        .length < 6
+    ) {
+      return res.status(400).json({
+        message:
+          'Password must be at least 6 characters'
+      });
+    }
+
+    u.password = await bcrypt.hash(
+      req.body.password,
+      10
+    );
+
+    u.passwordResetCode = undefined;
+    u.passwordResetExpires = undefined;
+
+    await u.save();
+
+    res.json({
+      message:
+        'Password reset successfully'
+    });
+  })
+);
+
+app.post(
+  '/api/auth/login',
+  asyncRoute(async (req, res) => {
+    const email = String(
+      req.body.email || ''
+    )
+      .trim()
+      .toLowerCase();
+
+    const u = await User.findOne({email});
+
+    if (
+      !u ||
+      !(await bcrypt.compare(
+        req.body.password || '',
+        u.password
+      ))
+    ) {
+      return res.status(401).json({
+        message:
+          'Invalid email or password'
+      });
+    }
+
+    res.json({
+      ...tokens(u),
+      user: publicUser(u)
+    });
+  })
+);
+
+app.post(
+  '/api/auth/refresh',
+  asyncRoute(async (req, res) => {
+    const p = jwt.verify(
+      req.body.refreshToken,
+      process.env.JWT_REFRESH_SECRET ||
+        'dev-refresh'
+    );
+
+    const u = await User.findById(p.id);
+
+    res.json(tokens(u));
+  })
+);
+
+app.post(
+  '/api/auth/logout',
+  (req, res) =>
+    res.json({
+      message: 'Logged out'
+    })
+);
+
+
+// =========================
+// NOTES
+// =========================
+
+function queueNoteDigest(note) {
+  const key =
+    `${note.subject}:${note.semester}`;
+
+  clearTimeout(digestTimers.get(key));
+
+  digestTimers.set(
+    key,
+    setTimeout(async () => {
+      try {
+        const users = await User.find({
+          _id: {$ne: note.uploader}
+        }).select('_id');
+
+        await Notification.insertMany(
+          users.map(u => ({
+            recipient: u._id,
+            type: 'note_digest',
+            message: `New ${note.subject} resources are available for semester ${note.semester}`,
+            relatedId:
+              note._id.toString()
+          }))
+        );
+      } catch (e) {
+        console.error(
+          'Digest notification failed',
+          e.message
+        );
+      }
+
+      digestTimers.delete(key);
+    }, 15 * 60 * 1000)
+  );
+}
+
+function trending(n) {
+  const age =
+    (Date.now() -
+      new Date(n.createdAt).getTime()) /
+    86400000;
+
+  const net =
+    n.upvotes.length -
+    n.downvotes.length;
+
+  const downloads =
+    Math.log1p(n.downloadCount) /
+    Math.log(101);
+
+  const recency =
+    Math.exp(-age / 14);
+
+  return (
+    0.55 * net +
+    0.25 * downloads +
+    0.2 * recency
+  );
+}
+
+app.get(
+  '/api/notes',
+  auth,
+  asyncRoute(async (req, res) => {
+    const key =
+      'notes:' +
+      req.user._id +
+      ':' +
+      JSON.stringify(req.query);
+
+    const hit = cache.get(key);
+
+    if (hit) {
+      return res.json(hit);
+    }
+
+    const q = collegeScope(req);
+
+    for (const k of [
+      'category',
+      'subject',
+      'semester',
+      'branch'
+    ]) {
+      if (req.query[k]) {
+        q[k] = req.query[k];
+      }
+    }
+
+    if (req.query.search) {
+      const search = escapeRegex(req.query.search.trim());
+      if (search) {
+        q.$or = [
+          {title: {$regex: search, $options: 'i'}},
+          {subject: {$regex: search, $options: 'i'}}
+        ];
+      }
+    }
+
+    let notes = await Note.find(q)
+      .populate('uploader', 'name')
+      .lean();
+
+    if (req.query.sort === 'trending') {
+      notes.sort(
+        (a, b) =>
+          trending(b) - trending(a)
+      );
+    } else if (
+      req.query.sort === 'popular'
+    ) {
+      notes.sort(
+        (a, b) =>
+          b.downloadCount -
+          a.downloadCount
+      );
+    } else {
+      notes.sort(
+        (a, b) =>
+          new Date(b.createdAt) -
+          new Date(a.createdAt)
+      );
+    }
+
+    const out = {notes};
+
+    cache.set(key, out);
+
+    res.json(out);
+  })
+);
+
+
+// The file is uploaded directly from the browser to Supabase.
+// This route only saves the private storage path and metadata.
+
+app.post(
+  '/api/notes',
+  auth,
+  asyncRoute(async (req, res) => {
+    const categories = [
+      'Notes',
+      'Assignment',
+      'Practicals',
+      'IMPs',
+      'PYQs',
+      'Other'
+    ];
+
+    const category =
+      categories.includes(req.body.category)
+        ? req.body.category
+        : 'Notes';
+
+    if (!req.body.filePath) {
+      return res.status(400).json({
+        message: 'File upload is required'
+      });
+    }
+
+    const existing = await Note.findOne({
+      uploader: req.user._id,
+      filePath: req.body.filePath
+    });
+    if (existing) return res.json(existing);
+
+    let n;
+    try {
+      n = await Note.create({
+        uploader: req.user._id,
+      collegeDomain:
+        req.user.collegeDomain,
+      category,
+      title: req.body.title,
+      subject: req.body.subject,
+      semester: req.body.semester,
+      branch: req.body.branch,
+      fileType: req.body.fileType,
+      filePath: req.body.filePath,
+      // Temporary truthy marker for existing frontend cards; downloads still use signed URLs.
+      fileUrl: req.body.filePath
+      });
+    } catch (error) {
+      await removeSupabaseFile(req.body.filePath);
+      throw error;
+    }
+
+    queueNoteDigest(n);
+
+    clear();
+
+    res.status(201).json(n);
+  })
+);
+
+app.post(
+  '/api/notes/upload-cleanup',
+  auth,
+  asyncRoute(async (req, res) => {
+    const filePath = String(req.body.filePath || '');
+    if (!filePath.startsWith(`${req.user._id}/`)) {
+      return res.status(403).json({message: 'Not allowed'});
+    }
+    await removeSupabaseFile(filePath);
+    res.json({message: 'Upload cleaned up'});
+  })
+);
+
+app.get(
+  '/api/notes/:id',
+  auth,
+  asyncRoute(async (req, res) =>
+    res.json(
+      await Note.findOne({
+        _id: req.params.id,
+        ...collegeScope(req)
+      }).populate('uploader', 'name')
+    )
+  )
+);
+
+
+// =========================
+// NOTE VOTES / DOWNLOADS
+// =========================
+
+const interactionLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120
+});
+
+app.use(
+  '/api/notes/:id/vote',
+  interactionLimit
+);
+
+app.use(
+  '/api/notes/:id/download',
+  interactionLimit
+);
+
+app.post(
+  '/api/notes/:id/vote',
+  auth,
+  asyncRoute(async (req, res) => {
+    if (
+      !['up', 'down', 'none'].includes(
+        req.body.type
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          'Vote must be up, down, or none'
+      });
+    }
+
+    const uid = req.user._id;
+
+    const withoutUser = field => ({
+      $filter: {
+        input: {
+          $ifNull: ['$' + field, []]
+        },
+        as: 'vote',
+        cond: {
+          $ne: ['$$vote', uid]
+        }
+      }
+    });
+
+    const update = {
+      $set: {
+        upvotes:
+          withoutUser('upvotes'),
+        downvotes:
+          withoutUser('downvotes')
+      }
+    };
+
+    if (req.body.type === 'up') {
+      update.$set.upvotes = {
+        $concatArrays: [
+          update.$set.upvotes,
+          [uid]
+        ]
+      };
+    }
+
+    if (req.body.type === 'down') {
+      update.$set.downvotes = {
+        $concatArrays: [
+          update.$set.downvotes,
+          [uid]
+        ]
+      };
+    }
+
+    const n =
+      await Note.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          ...collegeScope(req)
+        },
+        [update],
+        {new: true}
+      );
+
+    if (!n) {
+      return res.status(404).json({
+        message: 'Note not found'
+      });
+    }
+
+    clear();
+
+    res.json(n);
+  })
+);
+
+app.post(
+  '/api/notes/:id/download',
+  auth,
+  asyncRoute(async (req, res) => {
+    const n =
+      await Note.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          ...collegeScope(req)
+        },
+        {
+          $inc: {
+            downloadCount: 1
+          }
+        },
+        {new: true}
+      );
+
+    if (!n) {
+      return res.status(404).json({
+        message: 'Note not found'
+      });
+    }
+
+    clear();
+
+    if (!n.filePath) {
+      if (n.fileUrl) {
+        return res.json({
+          fileUrl: n.fileUrl,
+          downloadCount: n.downloadCount
+        });
+      }
+      return res.status(410).json({
+        message: 'This file uses the old storage format and must be re-uploaded.'
+      });
+    }
+
+    const {data: signed, error} = await supabase.storage
+      .from(supabaseBucket)
+      .createSignedUrl(n.filePath, 60 * 60);
+    if (error) return res.status(500).json({message: error.message});
+
+    res.json({
+      fileUrl: signed.signedUrl,
+      downloadCount: n.downloadCount
+    });
+  })
+);
+
+app.delete(
+  '/api/notes/:id',
+  auth,
+  asyncRoute(async (req, res) => {
+    const n = await Note.findOne({
+      _id: req.params.id,
+      ...collegeScope(req)
+    });
+
+    if (
+      !n ||
+      (!req.user.isAdmin &&
+        n.uploader.toString() !==
+          req.user._id.toString())
+    ) {
+      return res.status(403).json({
+        message: 'Not allowed'
+      });
+    }
+
+    await n.deleteOne();
+    await removeSupabaseFile(n.filePath);
+
+    clear();
+
+    res.json({
+      message: 'Deleted'
+    });
+  })
+);
+
+
+// =========================
+// DOUBTS
+// =========================
+
+app.post(
+  '/api/doubts',
+  auth,
+  asyncRoute(async (req, res) =>
+    res.status(201).json(
+      await Doubt.create({
+        ...req.body,
+        author: req.user._id,
+        collegeDomain:
+          req.user.collegeDomain
+      })
+    )
+  )
+);
+
+app.get(
+  '/api/doubts',
+  auth,
+  asyncRoute(async (req, res) => {
+    const q = collegeScope(req);
+
+    if (req.query.subject) {
+      q.subject = req.query.subject;
+    }
+
+    if (req.query.status) {
+      q.status = req.query.status;
+    }
+
+    res.json({
+      doubts: await Doubt.find(q)
+        .populate('author', 'name')
+        .sort('-createdAt')
+    });
+  })
+);
+
+app.get(
+  '/api/doubts/:id',
+  auth,
+  asyncRoute(async (req, res) =>
+    res.json(
+      await Doubt.findOne({
+        _id: req.params.id,
+        ...collegeScope(req)
+      })
+        .populate('author', 'name')
+        .populate(
+          'answers.author',
+          'name'
+        )
+    )
+  )
+);
+
+app.post(
+  '/api/doubts/:id/answers',
+  auth,
+  asyncRoute(async (req, res) => {
+    const d = await Doubt.findById(
+      req.params.id
+    );
+
+    d.answers.push({
+      author: req.user._id,
+      content: req.body.content,
+      isAccepted: false,
+      upvotes: [],
+      createdAt: new Date()
+    });
+
+    await d.save();
+
+    if (
+      d.author.toString() !==
+      req.user._id.toString()
+    ) {
+      await Notification.create({
+        recipient: d.author,
+        type: 'answer',
+        message: `${safeName(
+          req.user
+        )} answered your doubt`,
+        relatedId: d._id.toString()
+      });
+    }
+
+    res.status(201).json(d);
+  })
+);
+
+app.post(
+  '/api/doubts/:id/answers/:answerId/accept',
+  auth,
+  asyncRoute(async (req, res) => {
+    const d = await Doubt.findById(
+      req.params.id
+    );
+
+    if (
+      d.author.toString() !==
+      req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message:
+          'Only the doubt author can accept an answer'
+      });
+    }
+
+    const a = d.answers.id(
+      req.params.answerId
+    );
+
+    a.isAccepted = true;
+    d.status = 'resolved';
+
+    await d.save();
+
+    await User.findByIdAndUpdate(
+      a.author,
+      {
+        $inc: {
+          contributionScore: 25
+        }
+      }
+    );
+
+    res.json(d);
+  })
+);
+
+app.post(
+  '/api/doubts/answers/:id/vote',
+  auth,
+  asyncRoute(async (req, res) => {
+    const d =
+      await Doubt.findOne({
+        'answers._id': req.params.id
+      });
+
+    const a = d.answers.id(
+      req.params.id
+    );
+
+    a.upvotes = a.upvotes.includes(
+      req.user._id
+    )
+      ? a.upvotes.filter(
+          x =>
+            x.toString() !==
+            req.user._id.toString()
+        )
+      : [
+          ...a.upvotes,
+          req.user._id
+        ];
+
+    await d.save();
+
+    res.json(a);
+  })
+);
+
+
+// =========================
+// USERS
+// =========================
+
+app.get(
+  '/api/users/leaderboard',
+  auth,
+  asyncRoute(async (req, res) => {
+    const page = Number(
+      req.query.page || 1
+    );
+
+    const users = await User.find(
+      collegeScope(req)
+    )
+      .select(
+        '-password -emailVerificationCode -passwordResetCode'
+      )
+      .sort('-contributionScore')
+      .skip((page - 1) * 10)
+      .limit(10);
+
+    res.json({users});
+  })
+);
+
+app.get(
+  '/api/users/me',
+  auth,
+  (req, res) =>
+    res.json({
+      user: publicUser(req.user)
+    })
+);
+
+app.patch(
+  '/api/users/me',
+  auth,
+  asyncRoute(async (req, res) => {
+    for (const key of [
+      'name',
+      'branch',
+      'year',
+      'semester'
+    ]) {
+      if (req.body[key] !== undefined) {
+        req.user[key] = String(
+          req.body[key]
+        ).trim();
+      }
+    }
+
+    await req.user.save();
+
+    res.json({
+      user: publicUser(req.user)
+    });
+  })
+);
+
+
+// =========================
+// NOTIFICATIONS
+// =========================
+
+app.get(
+  '/api/notifications',
+  auth,
+  asyncRoute(async (req, res) => {
+    const page = Math.max(
+      Number(req.query.page) || 1,
+      1
+    );
+
+    const limit = Math.min(
+      Math.max(
+        Number(req.query.limit) || 10,
+        1
+      ),
+      50
+    );
+
+    const filter = {
+      recipient: req.user._id
+    };
+
+    const [
+      notifications,
+      total,
+      unread
+    ] = await Promise.all([
+      Notification.find(filter)
+        .sort('-createdAt')
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      Notification.countDocuments(filter),
+
+      Notification.countDocuments({
+        ...filter,
+        read: false
+      })
+    ]);
+
+    res.json({
+      notifications,
+      page,
+      limit,
+      total,
+      unread,
+      totalPages: Math.ceil(
+        total / limit
+      )
+    });
+  })
+);
+
+app.patch(
+  '/api/notifications/:id/read',
+  auth,
+  asyncRoute(async (req, res) =>
+    res.json(
+      await Notification.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          recipient: req.user._id
+        },
+        {
+          read: true
+        },
+        {new: true}
+      )
+    )
+  )
+);
+
+
+// =========================
+// SEARCH
+// =========================
+
+app.get(
+  '/api/search',
+  auth,
+  asyncRoute(async (req, res) => {
+    const q = (
+      req.query.q || ''
+    ).trim();
+
+    if (!q) {
+      return res.json({
+        notes: [],
+        doubts: []
+      });
+    }
+
+    const scope = collegeScope(req);
+
+    const [
+      notes,
+      doubts
+    ] = await Promise.all([
+      Note.find({
+        ...scope,
+        $or: [
+          {title: {$regex: escapeRegex(q), $options: 'i'}},
+          {subject: {$regex: escapeRegex(q), $options: 'i'}}
+        ]
+      })
+        .populate('uploader', 'name')
+        .limit(20),
+
+      Doubt.find({
+        ...scope,
+        $text: {
+          $search: q
+        }
+      })
+        .populate('author', 'name')
+        .limit(20)
+    ]);
+
+    res.json({
+      notes,
+      doubts
+    });
+  })
+);
+
+
+// =========================
+// ADMIN
+// =========================
+
+async function admin(
+  req,
+  res,
+  next
+) {
+  const configured =
+    process.env.ADMIN_EMAIL
+      ?.trim()
+      .toLowerCase();
+
+  if (
+    !req.user?.isAdmin ||
+    !configured ||
+    req.user.email !== configured
+  ) {
+    return res.status(403).json({
+      message:
+        'Admin access required'
+    });
+  }
+
+  next();
+}
+
+app.get(
+  '/api/admin/stats',
+  auth,
+  admin,
+  asyncRoute(async (req, res) => {
+    const week = new Date(
+      Date.now() -
+        7 * 86400000
+    );
+
+    res.json({
+      users:
+        await User.countDocuments(),
+
+      notes:
+        await Note.countDocuments(),
+
+      doubts:
+        await Doubt.countDocuments(),
+
+      uploadsThisWeek:
+        await Note.countDocuments({
+          createdAt: {
+            $gte: week
+          }
+        }),
+
+      resolutionRate: 0
+    });
+  })
+);
+
+app.delete(
+  '/api/admin/notes/:id',
+  auth,
+  admin,
+  asyncRoute(async (req, res) => {
+    const note = await Note.findByIdAndDelete(req.params.id);
+    await removeSupabaseFile(note?.filePath);
+
+    res.json({
+      message: 'Deleted'
+    });
+  })
+);
+
+app.delete(
+  '/api/admin/doubts/:id',
+  auth,
+  admin,
+  asyncRoute(async (req, res) => {
+    await Doubt.findByIdAndDelete(
+      req.params.id
+    );
+
+    res.json({
+      message: 'Deleted'
+    });
+  })
+);
+
+app.patch(
+  '/api/admin/users/:id/promote',
+  auth,
+  admin,
+  asyncRoute(async (req, res) =>
+    res.json(
+      await User.findByIdAndUpdate(
+        req.params.id,
+        {
+          isAdmin: true
+        },
+        {new: true}
+      )
+    )
+  )
+);
+
+app.get(
+  '/api/admin/colleges',
+  auth,
+  admin,
+  asyncRoute(async (req, res) =>
+    res.json({
+      colleges:
+        await College.find().sort('name')
+    })
+  )
+);
+
+app.post(
+  '/api/admin/colleges',
+  auth,
+  admin,
+  asyncRoute(async (req, res) => {
+    const domain =
+      normalizeDomain(
+        req.body.domain
+      );
+
+    const name = String(
+      req.body.name || domain
+    ).trim();
+
+    if (!domain || !name) {
+      return res.status(400).json({
+        message:
+          'College name and email domain are required'
+      });
+    }
+
+    const college =
+      await College.findOneAndUpdate(
+        {domain},
+        {
+          name,
+          domain,
+          approved: true,
+          addedBy: req.user._id
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      );
+
+    res.status(201).json(college);
+  })
+);
+
+app.delete(
+  '/api/admin/colleges/:id',
+  auth,
+  admin,
+  asyncRoute(async (req, res) => {
+    const college =
+      await College.findByIdAndDelete(
+        req.params.id
+      );
+
+    if (!college) {
+      return res.status(404).json({
+        message:
+          'College not found'
+      });
+    }
+
+    res.json({
+      message:
+        'College access revoked'
+    });
+  })
+);
+
+
+// =========================
+// ERROR HANDLER
+// =========================
+
+app.use(
+  (err, req, res, next) => {
+    console.error(err);
+
+    res.status(500).json({
+      message:
+        err.message ||
+        'Server error'
+    });
+  }
+);
+
+
+// =========================
+// START SERVER
+// =========================
+
 export default app;
-const port=process.env.PORT||5000;
-if(!process.env.VERCEL) app.listen(port,()=>console.log(`CampusHub API on ${port}`));
+
+const port =
+  process.env.PORT || 5000;
+
+if (!process.env.VERCEL) {
+  app.listen(
+    port,
+    () =>
+      console.log(
+        `CampusHub API on ${port}`
+      )
+  );
+}

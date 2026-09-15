@@ -2,7 +2,7 @@
   "name": "campushub",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev": "concurrently \"npm.cmd --prefix server run dev\" \"npm.cmd --prefix client run dev\"",
     "install:all": "npm install && npm --prefix server install && npm --prefix client install"
   },
   "devDependencies": {
